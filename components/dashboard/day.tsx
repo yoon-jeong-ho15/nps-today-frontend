@@ -298,8 +298,8 @@ export default function DayDashboard({
                                     <TableRow>
                                         <TableHead className="w-[80px]">순위</TableHead>
                                         <TableHead>종목명</TableHead>
-                                        <TableHead>종목코드</TableHead>
-                                        <TableHead className="text-right">순매수 수량</TableHead>
+                                        <TableHead className="hidden md:table-cell">종목코드</TableHead>
+                                        <TableHead className="hidden md:table-cell text-right">순매수 수량</TableHead>
                                         <TableHead className="text-right">순매수 금액</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -328,11 +328,11 @@ export default function DayDashboard({
                                                             <ChevronRight className="w-3.5 h-3.5 opacity-50" />
                                                         </Link>
                                                     </TableCell>
-                                                    <TableCell className="font-mono text-muted-foreground">
+                                                    <TableCell className="hidden md:table-cell font-mono text-muted-foreground">
                                                         {item.company_id}
                                                     </TableCell>
                                                     <TableCell
-                                                        className={`text-right font-medium font-mono ${isNonTouched
+                                                        className={`hidden md:table-cell text-right font-medium font-mono ${isNonTouched
                                                             ? "text-muted-foreground"
                                                             : item.quantity >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"
                                                             }`}
