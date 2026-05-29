@@ -1,5 +1,18 @@
 import { useState, useMemo } from "react";
 import { Link } from "react-router";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import {
+    Calendar,
+    Search,
+    ArrowUpDown,
+    TrendingUp,
+    TrendingDown,
+    Building2,
+    ChevronRight,
+    Info,
+    DollarSign
+} from "lucide-react";
 
 interface NetBuyRecord {
     date: string;
@@ -26,24 +39,19 @@ interface DayDashboardProps {
 function formatDate(dateStr: string) {
     if (!dateStr || dateStr.length !== 8) return dateStr;
     const year = dateStr.substring(0, 4);
-    const month = dateStr.substring(4, 6);
-    const day = dateStr.substring(6, 8);
-    const months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ];
-    const mIdx = parseInt(month, 10) - 1;
-    const mName = mIdx >= 0 && mIdx < 12 ? months[mIdx] : month;
-    return `${mName} ${parseInt(day, 10)}, ${year}`;
+    const month = parseInt(dateStr.substring(4, 6), 10);
+    const day = parseInt(dateStr.substring(6, 8), 10);
+    return `${year}년 ${month}월 ${day}일`;
 }
 
 function formatAmount(amount: number) {
+    if (amount === 0) return "0 백만원";
     const sign = amount > 0 ? "+" : "";
-    // amount is typically in 100M KRW or 1M KRW. Let's format it nicely.
     return `${sign}${amount.toLocaleString()} 백만원`;
 }
 
 function formatQuantity(qty: number) {
+    if (qty === 0) return "0 주";
     const sign = qty > 0 ? "+" : "";
     return `${sign}${qty.toLocaleString()} 주`;
 }
@@ -58,18 +66,18 @@ export default function DayDashboard({
     dataLoading = false,
 }: DayDashboardProps) {
 
-    // 1. Map company IDs to names for O(1) lookup
+    // 1. Map company IDs to names
     const companyMap = useMemo(() => {
         return new Map(companies.map((c) => [c.id, c.name]));
     }, [companies]);
 
     // 2. Filter records for the selected date
-    const selectedRecords = useMemo(() => {
+    const selectedRecords = useMemo<(NetBuyRecord & { company_name: string })[]>(() => {
         return data
             .filter((r) => r.date === selectedDate)
             .map((r) => ({
                 ...r,
-                company_name: companyMap.get(r.company_id) || `Company (${r.company_id})`,
+                company_name: companyMap.get(r.company_id) || `회사 (${r.company_id})`,
             }));
     }, [data, selectedDate, companyMap]);
 
@@ -112,23 +120,25 @@ export default function DayDashboard({
     }, [selectedRecords, searchTerm, sortBy]);
 
     // 4. Metrics calculation
-    const metrics = useMemo(() => {
+    const metrics = useMemo<{
+        totalBuyAmount: number;
+        totalSellAmount: number;
+        netAmount: number;
+        buyCount: number;
+        sellCount: number;
+    }>(() => {
         let totalBuyAmount = 0;
         let totalSellAmount = 0;
-        let topBuy: (typeof selectedRecords[0]) | null = null;
-        let topSell: (typeof selectedRecords[0]) | null = null;
+        let buyCount = 0;
+        let sellCount = 0;
 
         selectedRecords.forEach((r) => {
             if (r.amount > 0) {
                 totalBuyAmount += r.amount;
-                if (!topBuy || r.amount > (topBuy as any).amount) {
-                    topBuy = r;
-                }
-            } else {
+                buyCount += 1;
+            } else if (r.amount < 0) {
                 totalSellAmount += r.amount;
-                if (!topSell || r.amount < (topSell as any).amount) {
-                    topSell = r;
-                }
+                sellCount += 1;
             }
         });
 
@@ -136,8 +146,8 @@ export default function DayDashboard({
             totalBuyAmount,
             totalSellAmount,
             netAmount: totalBuyAmount + totalSellAmount,
-            topBuy,
-            topSell,
+            buyCount,
+            sellCount,
         };
     }, [selectedRecords]);
 
@@ -145,236 +155,210 @@ export default function DayDashboard({
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-            {/* Header Panel */}
-            <header className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-3xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-                <div>
-                    <div className="flex items-center gap-3">
-                        <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold tracking-wider uppercase">
-                            NPS Today
-                        </span>
-                        {isTodaySelected ? (
-                            <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
-                                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
-                                Live Today
-                            </span>
-                        ) : (
-                            <span className="text-xs font-medium text-slate-400">Historical View</span>
-                        )}
-                    </div>
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight mt-2">
-                        KOSPI Net Buying Trends
-                    </h1>
-                    <p className="text-slate-400 text-sm mt-1">
-                        Tracking the National Pension Service (NPS) daily net buy actions on KOSPI stocks.
-                    </p>
-                </div>
-
-                {/* Date Tabs Selector */}
-                <div className="flex flex-col gap-2">
-                    <label className="text-slate-400 text-xs font-semibold uppercase tracking-wider">Trading Date</label>
-                    <div className="flex flex-wrap gap-2 max-w-full overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+            {/* Dropdown Date Selector (Vanilla HTML select styled beautifully) */}
+            <div className="flex gap-2 min-w-[240px]">
+                <label className="text-muted-foreground text-sm font-semibold uppercase tracking-wider flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" /> 거래일 선택
+                </label>
+                <div className="relative">
+                    <select
+                        value={selectedDate}
+                        onChange={(e) => onChangeDate(e.target.value)}
+                        className="w-full appearance-none bg-background border border-border rounded-xl px-4 py-2.5 pr-10 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all duration-200 cursor-pointer font-medium"
+                    >
                         {availableDates.map((d) => (
-                            <button
-                                key={d}
-                                onClick={() => onChangeDate(d)}
-                                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 flex items-center gap-2 cursor-pointer border ${selectedDate === d
-                                    ? "bg-emerald-500 text-slate-950 border-transparent shadow-[0_0_20px_rgba(16,185,129,0.35)]"
-                                    : "bg-slate-900/60 text-slate-300 border-slate-800/80 hover:bg-slate-800 hover:text-white"
-                                    }`}
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth={2}
-                                    stroke="currentColor"
-                                    className="w-4 h-4"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
-                                    />
-                                </svg>
+                            <option key={d} value={d}>
                                 {formatDate(d)}
-                            </button>
+                            </option>
                         ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
                     </div>
                 </div>
-            </header>
+            </div>
 
             <div className="relative">
                 {dataLoading && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center min-h-[400px]">
-                        <div className="bg-slate-900/90 border border-slate-800 backdrop-blur-sm px-6 py-4 rounded-2xl flex items-center gap-3 shadow-2xl">
-                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-emerald-500"></div>
-                            <span className="text-slate-200 text-sm font-medium">Fetching trading data...</span>
+                        <div className="bg-card/90 border border-border backdrop-blur-sm px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl">
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+                            <span className="text-foreground text-sm font-medium">거래 데이터 불러오는 중...</span>
                         </div>
                     </div>
                 )}
 
-                <div className={`flex flex-col gap-8 transition-all duration-300 ${dataLoading ? "opacity-25 pointer-events-none blur-[1px]" : "opacity-100"
-                    }`}>
+                <div className={`flex flex-col gap-8 transition-all duration-300 ${dataLoading ? "opacity-25 pointer-events-none blur-[1px]" : "opacity-100"}`}>
 
-                    {/* Key Metrics Cards */}
+                    {/* Key Metrics Cards (Shadcn UI) */}
                     <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Net Total Card */}
-                        <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all duration-300">
-                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth={1.5}
-                                    stroke="currentColor"
-                                    className="w-24 h-24 text-white"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"
-                                    />
-                                </svg>
-                            </div>
-                            <div>
-                                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                    Total Day Net Buying
-                                </span>
-                                <h3
-                                    className={`text-3xl font-extrabold tracking-tight mt-2 flex items-baseline gap-1.5 ${metrics.netAmount >= 0 ? "text-emerald-400" : "text-rose-400"
-                                        }`}
-                                >
+                        <Card className="bg-card border-border shadow-lg relative overflow-hidden group hover:border-primary/50 transition-all duration-300 rounded-2xl">
+                            <CardHeader className="pb-2">
+                                <CardDescription className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                                    일일 순매수 합계
+                                </CardDescription>
+                                <CardTitle className={`text-3xl font-extrabold tracking-tight mt-2 flex items-baseline gap-1.5 ${metrics.netAmount >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
                                     {formatAmount(metrics.netAmount)}
-                                </h3>
-                            </div>
-                            <div className="mt-6 flex items-center gap-4 text-xs font-semibold border-t border-slate-800/60 pt-4">
-                                <div className="flex flex-col">
-                                    <span className="text-slate-500">TOTAL BUY</span>
-                                    <span className="text-emerald-400/90 font-bold mt-0.5">
-                                        {formatAmount(metrics.totalBuyAmount)}
-                                    </span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                    <DollarSign className="w-24 h-24 text-foreground" />
                                 </div>
-                                <div className="h-6 w-px bg-slate-800/60"></div>
-                                <div className="flex flex-col">
-                                    <span className="text-slate-500">TOTAL SELL</span>
-                                    <span className="text-rose-400/90 font-bold mt-0.5">
-                                        {formatAmount(metrics.totalSellAmount)}
-                                    </span>
+                                <div className="mt-4 flex items-center gap-4 text-xs font-semibold border-t border-border/50 pt-4">
+                                    <div className="flex flex-col">
+                                        <span className="text-muted-foreground">총 매수</span>
+                                        <span className="text-emerald-500 dark:text-emerald-400 font-bold mt-0.5">
+                                            {formatAmount(metrics.totalBuyAmount)}
+                                        </span>
+                                    </div>
+                                    <div className="h-6 w-px bg-border"></div>
+                                    <div className="flex flex-col">
+                                        <span className="text-muted-foreground">총 매도</span>
+                                        <span className="text-rose-500 dark:text-rose-400 font-bold mt-0.5">
+                                            {formatAmount(metrics.totalSellAmount)}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Buy/Sell Counts Card */}
+                        <Card className="bg-card border-border shadow-lg hover:border-primary/50 transition-all duration-300 rounded-2xl">
+                            <CardHeader className="pb-2">
+                                <CardDescription className="text-muted-foreground text-xs font-semibold uppercase tracking-wider flex items-center gap-1">
+                                    <ArrowUpDown className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400" /> 매수/매도 종목 수
+                                </CardDescription>
+                                <div className="mt-2 flex items-center gap-6">
+                                    <div className="flex flex-col">
+                                        <span className="text-muted-foreground text-xs mb-1">매수 종목</span>
+                                        <span className="text-emerald-500 dark:text-emerald-400 font-bold text-3xl tracking-tight">{metrics.buyCount}<span className="text-sm text-emerald-500/70 dark:text-emerald-400/70 ml-1">개</span></span>
+                                    </div>
+                                    <div className="h-10 w-px bg-border"></div>
+                                    <div className="flex flex-col">
+                                        <span className="text-muted-foreground text-xs mb-1">매도 종목</span>
+                                        <span className="text-rose-500 dark:text-rose-400 font-bold text-3xl tracking-tight">{metrics.sellCount}<span className="text-sm text-rose-500/70 dark:text-rose-400/70 ml-1">개</span></span>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="mt-4 border-t border-border/50 pt-3 flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground">전체 거래 종목</span>
+                                    <span className="text-foreground font-mono font-semibold">{metrics.buyCount + metrics.sellCount}개</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+
                     </section>
 
                     {/* Interactive Full Table Section */}
-                    <section className="bg-slate-900/20 border border-slate-800/60 rounded-3xl p-6 shadow-md">
+                    <section className="bg-card border border-border rounded-2xl p-6 shadow-md transition-colors">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                            <div>
-                                <h3 className="text-lg font-bold text-white">Full Net Buy Records</h3>
-                                <p className="text-slate-400 text-xs mt-0.5">
-                                    Showing {filteredAndSortedRecords.length} of {selectedRecords.length} records
-                                </p>
-                            </div>
+                            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                                <Building2 className="w-4 h-4 text-muted-foreground" /> 전체 순매수 기록
+                            </h3>
+
+
 
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                                 {/* Search Input */}
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        placeholder="Search company or code..."
+                                        placeholder="종목명 또는 코드 검색..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full sm:w-64 bg-slate-950 border border-slate-800 rounded-xl py-2 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all duration-200"
+                                        className="w-full sm:w-64 bg-background border border-border rounded-xl py-2 pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all duration-200"
                                     />
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        strokeWidth={2}
-                                        stroke="currentColor"
-                                        className="w-4 h-4 text-slate-500 absolute left-3 top-3"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                                        />
-                                    </svg>
+                                    <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-3" />
                                 </div>
 
                                 {/* Sort Dropdown */}
                                 <div className="flex items-center gap-2">
-                                    <span className="text-slate-500 text-xs font-medium whitespace-nowrap">Sort by</span>
+                                    <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">정렬 기준</span>
                                     <select
                                         value={sortBy}
                                         onChange={(e: any) => setSortBy(e.target.value)}
-                                        className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 transition-all duration-200 cursor-pointer"
+                                        className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all duration-200 cursor-pointer font-medium"
                                     >
-                                        <option value="amountDesc">Net Buy Amount (High → Low)</option>
-                                        <option value="amountAsc">Net Buy Amount (Low → High)</option>
+                                        <option value="amountDesc">순매수 금액 높은 순</option>
+                                        <option value="amountAsc">순매수 금액 낮은 순</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
 
                         {/* Records Table */}
-                        <div className="overflow-x-auto rounded-2xl border border-slate-800/80 bg-slate-950/40">
-                            <table className="w-full border-collapse text-left text-sm">
-                                <thead>
-                                    <tr className="border-b border-slate-800 text-slate-400 font-semibold bg-slate-900/30">
-                                        <th className="py-4 px-6">Rank</th>
-                                        <th className="py-4 px-6">Company</th>
-                                        <th className="py-4 px-6">Code</th>
-                                        <th className="py-4 px-6 text-right">Net Buy Quantity</th>
-                                        <th className="py-4 px-6 text-right">Net Buy Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-800/60">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[80px]">순위</TableHead>
+                                        <TableHead>종목명</TableHead>
+                                        <TableHead>종목코드</TableHead>
+                                        <TableHead className="text-right">순매수 수량</TableHead>
+                                        <TableHead className="text-right">순매수 금액</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
                                     {filteredAndSortedRecords.length > 0 ? (
-                                        filteredAndSortedRecords.map((item, index) => {
-                                            const isNetBuy = item.amount >= 0;
+                                        filteredAndSortedRecords.map((item, idx) => {
+                                            const isNetBuy = item.quantity >= 0;
+                                            const isNonTouched = item.quantity === 0 && item.amount === 0;
+
                                             return (
-                                                <tr
+                                                <TableRow
                                                     key={item.company_id}
-                                                    className="hover:bg-slate-800/30 transition-colors group duration-150"
+                                                    className={
+                                                        isNonTouched ? "bg-muted/50" : ""
+                                                    }
                                                 >
-                                                    <td className="py-3.5 px-6 font-semibold text-slate-500 group-hover:text-slate-300">
-                                                        {index + 1}
-                                                    </td>
-                                                    <td className="py-3.5 px-6 font-bold text-slate-200 group-hover:text-white">
+                                                    <TableCell className="font-medium text-muted-foreground">
+                                                        {idx + 1}
+                                                    </TableCell>
+                                                    <TableCell className="font-bold">
                                                         <Link
                                                             to={`/company?id=${item.company_id}`}
-                                                            className="hover:text-emerald-450 hover:underline transition-colors"
+                                                            className="hover:underline hover:text-primary flex items-center gap-1 transition-colors"
                                                         >
                                                             {item.company_name}
+                                                            <ChevronRight className="w-3.5 h-3.5 opacity-50" />
                                                         </Link>
-                                                    </td>
-                                                    <td className="py-3.5 px-6 text-slate-400 font-mono text-xs">
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-muted-foreground">
                                                         {item.company_id}
-                                                    </td>
-                                                    <td
-                                                        className={`py-3.5 px-6 text-right font-medium font-mono ${item.quantity >= 0 ? "text-emerald-400" : "text-rose-400"
+                                                    </TableCell>
+                                                    <TableCell
+                                                        className={`text-right font-medium font-mono ${isNonTouched
+                                                            ? "text-muted-foreground"
+                                                            : item.quantity >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"
                                                             }`}
                                                     >
                                                         {formatQuantity(item.quantity)}
-                                                    </td>
-                                                    <td
-                                                        className={`py-3.5 px-6 text-right font-bold font-mono ${isNetBuy ? "text-emerald-400" : "text-rose-400"
+                                                    </TableCell>
+                                                    <TableCell
+                                                        className={`text-right font-bold font-mono ${isNonTouched
+                                                            ? "text-muted-foreground"
+                                                            : isNetBuy ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"
                                                             }`}
                                                     >
                                                         {formatAmount(item.amount)}
-                                                    </td>
-                                                </tr>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })
                                     ) : (
-                                        <tr>
-                                            <td colSpan={5} className="py-12 text-center text-slate-500 font-medium">
-                                                No matching records found.
-                                            </td>
-                                        </tr>
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="h-24 text-center">
+                                                일치하는 종목 정보가 없습니다.
+                                            </TableCell>
+                                        </TableRow>
                                     )}
-                                </tbody>
-                            </table>
+                                </TableBody>
+                            </Table>
                         </div>
                     </section>
                 </div>

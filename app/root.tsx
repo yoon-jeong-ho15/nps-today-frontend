@@ -23,17 +23,23 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+import { ThemeProvider } from "./components/theme-provider";
+import Header from "../components/header";
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ko" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
       </head>
-      <body>
-        {children}
+      <body className="bg-background text-foreground antialiased transition-colors">
+        <ThemeProvider defaultTheme="light" storageKey="nps-ui-theme">
+          <Header />
+          {children}
+        </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

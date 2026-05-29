@@ -1,5 +1,21 @@
 import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
+import {
+    ArrowLeft,
+    Building2,
+    Calendar,
+    TrendingUp,
+    TrendingDown,
+    Percent,
+    DollarSign,
+    ArrowUpDown,
+    History
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ReferenceLine } from "recharts";
+import { ThemeToggle } from "~/components/theme-toggle";
 
 interface NetBuyRecord {
     date: string;
@@ -26,23 +42,19 @@ interface CompanyDashboardProps {
 function formatDate(dateStr: string) {
     if (!dateStr || dateStr.length !== 8) return dateStr;
     const year = dateStr.substring(0, 4);
-    const month = dateStr.substring(4, 6);
-    const day = dateStr.substring(6, 8);
-    const months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ];
-    const mIdx = parseInt(month, 10) - 1;
-    const mName = mIdx >= 0 && mIdx < 12 ? months[mIdx] : month;
-    return `${mName} ${parseInt(day, 10)}, ${year}`;
+    const month = parseInt(dateStr.substring(4, 6), 10);
+    const day = parseInt(dateStr.substring(6, 8), 10);
+    return `${year}년 ${month}월 ${day}일`;
 }
 
 function formatAmount(amount: number) {
+    if (amount === 0) return "0 백만원";
     const sign = amount > 0 ? "+" : "";
     return `${sign}${amount.toLocaleString()} 백만원`;
 }
 
 function formatQuantity(qty: number) {
+    if (qty === 0) return "0 주";
     const sign = qty > 0 ? "+" : "";
     return `${sign}${qty.toLocaleString()} 주`;
 }
@@ -57,7 +69,7 @@ export default function CompanyDashboard({
     dataLoading = false,
 }: CompanyDashboardProps) {
     const navigate = useNavigate();
-    
+
     // Sort all companies alphabetically for the selector
     const sortedCompanies = useMemo(() => {
         return [...allCompanies].sort((a, b) => a.name.localeCompare(b.name, "ko"));
@@ -74,7 +86,7 @@ export default function CompanyDashboard({
         let totalQuantity = 0;
         let buyDays = 0;
         let sellDays = 0;
-        
+
         data.forEach((r) => {
             totalAmount += r.amount;
             totalQuantity += r.quantity;
@@ -97,61 +109,34 @@ export default function CompanyDashboard({
         };
     }, [data]);
 
-    // 2. SVG Chart Configuration
-    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    // 2. Chart Configuration
+    const chartConfig = useMemo(() => {
+        return {
+            quantity: {
+                label: "순매수 수량",
+            },
+            positive: {
+                label: "순매수",
+                color: "#10b981", // emerald-500
+            },
+            negative: {
+                label: "순매도",
+                color: "#f43f5e", // rose-500
+            }
+        };
+    }, []);
 
-    const svgWidth = 1000;
-    const svgHeight = 280;
-    const paddingX = 40;
-    const paddingY = 30;
-    const chartWidth = svgWidth - paddingX * 2;
-    const chartHeight = svgHeight - paddingY * 2;
+    // Calculate gradient offset for split color
+    const gradientOffset = useMemo(() => {
+        if (chronologicalData.length === 0) return 0;
+        const dataMax = Math.max(...chronologicalData.map((i) => i.quantity));
+        const dataMin = Math.min(...chronologicalData.map((i) => i.quantity));
 
-    const maxAbsAmount = useMemo(() => {
-        if (chronologicalData.length === 0) return 1;
-        const maxVal = Math.max(...chronologicalData.map((d) => Math.abs(d.amount)), 1);
-        return maxVal;
+        if (dataMax <= 0) return 0;
+        if (dataMin >= 0) return 1;
+
+        return dataMax / (dataMax - dataMin);
     }, [chronologicalData]);
-
-    // Map index to X coordinate
-    const getX = (index: number) => {
-        if (chronologicalData.length <= 1) return paddingX + chartWidth / 2;
-        return paddingX + (index / (chronologicalData.length - 1)) * chartWidth;
-    };
-
-    // Map amount value to Y coordinate (symmetrical around zero in center)
-    const getY = (amount: number) => {
-        const center = paddingY + chartHeight / 2;
-        // Map ratio: amount / maxAbsAmount
-        // Since Y goes down as coordinate increases:
-        // amount = maxAbsAmount maps to paddingY
-        // amount = -maxAbsAmount maps to paddingY + chartHeight
-        return center - (amount / maxAbsAmount) * (chartHeight / 2);
-    };
-
-    const zeroY = getY(0);
-
-    // Build area & line path coordinates
-    const { linePath, areaPath } = useMemo(() => {
-        if (chronologicalData.length === 0) return { linePath: "", areaPath: "" };
-
-        const points = chronologicalData.map((d, idx) => ({
-            x: getX(idx),
-            y: getY(d.amount),
-        }));
-
-        const lPath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-        
-        // Area closed to the zero baseline
-        let aPath = "";
-        if (points.length > 0) {
-            aPath = `M ${points[0].x} ${zeroY} ` + 
-                    points.map((p) => `L ${p.x} ${p.y}`).join(" ") + 
-                    ` L ${points[points.length - 1].x} ${zeroY} Z`;
-        }
-
-        return { linePath: lPath, areaPath: aPath };
-    }, [chronologicalData, zeroY]);
 
     const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const id = e.target.value;
@@ -163,31 +148,27 @@ export default function CompanyDashboard({
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
             {/* Header / Top Panel */}
-            <header className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 rounded-3xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+            <header className="bg-card/70 backdrop-blur-md border border-border rounded-2xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 shadow-xl transition-colors">
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-3">
                         <Link
                             to="/"
-                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-800 hover:text-white rounded-full text-xs font-semibold tracking-wider transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-full text-xs font-semibold tracking-wider transition-colors cursor-pointer"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                            </svg>
-                            Back to Home
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            목록으로
                         </Link>
-                        <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-xs font-semibold tracking-wider uppercase">
-                            Company Analysis
+                        <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/25 rounded-full text-xs font-semibold tracking-wider">
+                            기업별 상세 분석
                         </span>
                     </div>
-                    
+
                     <div className="mt-2">
-                        <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-baseline gap-3">
+                        <h1 className="text-3xl font-extrabold text-foreground tracking-tight flex items-baseline gap-3">
                             <span>{companyName}</span>
-                            <span className="text-lg font-mono font-semibold text-slate-500">{companyId}</span>
+                            <span className="text-lg font-mono font-semibold text-muted-foreground">{companyId}</span>
                         </h1>
-                        <p className="text-slate-400 text-sm mt-1">
-                            National Pension Service (NPS) transaction trends over the recent {rangeDays} trading days.
-                        </p>
+
                     </div>
                 </div>
 
@@ -195,19 +176,18 @@ export default function CompanyDashboard({
                 <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-stretch sm:items-center gap-4">
                     {/* Time Range Selector */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-slate-500 text-xs font-bold uppercase tracking-wider">Analysis Window</label>
-                        <div className="inline-flex bg-slate-950 border border-slate-800/80 rounded-xl p-1 gap-1">
+                        <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider">조회 기간 설정</label>
+                        <div className="inline-flex bg-background border border-border rounded-xl p-1 gap-1">
                             {[30, 90, 180, 365].map((days) => (
                                 <button
                                     key={days}
                                     onClick={() => onRangeChange(days)}
-                                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                        rangeDays === days
-                                            ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/10"
-                                            : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/50"
-                                    }`}
+                                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${rangeDays === days
+                                        ? "bg-yellow-500 text-white dark:text-zinc-950 shadow-md"
+                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                        }`}
                                 >
-                                    {days}D
+                                    {days}일
                                 </button>
                             ))}
                         </div>
@@ -215,11 +195,11 @@ export default function CompanyDashboard({
 
                     {/* Company Switcher */}
                     <div className="flex flex-col gap-1.5 min-w-[200px]">
-                        <label className="text-slate-500 text-xs font-bold uppercase tracking-wider">Select Another Company</label>
+                        <label className="text-muted-foreground text-xs font-bold uppercase tracking-wider">분석 종목 변경</label>
                         <select
                             value={companyId}
                             onChange={handleCompanyChange}
-                            className="w-full bg-slate-950 border border-slate-800/80 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-emerald-500/50 transition-all duration-200 cursor-pointer"
+                            className="w-full bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all duration-200 cursor-pointer font-medium"
                         >
                             {sortedCompanies.map((c) => (
                                 <option key={c.id} value={c.id}>
@@ -235,374 +215,193 @@ export default function CompanyDashboard({
             <div className="relative">
                 {dataLoading && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center min-h-[400px]">
-                        <div className="bg-slate-900/90 border border-slate-800 backdrop-blur-sm px-6 py-4 rounded-2xl flex items-center gap-3 shadow-2xl">
-                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-emerald-500"></div>
-                            <span className="text-slate-200 text-sm font-medium">Updating analysis data...</span>
+                        <div className="bg-card/90 border border-border backdrop-blur-sm px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl">
+                            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-yellow-500"></div>
+                            <span className="text-foreground text-sm font-medium">분석 결과 업데이트 중...</span>
                         </div>
                     </div>
                 )}
 
                 <div className={`flex flex-col gap-8 transition-all duration-300 ${dataLoading ? "opacity-25 pointer-events-none blur-[1px]" : "opacity-100"}`}>
-                    
-                    {/* Key Metrics Cards */}
+
+                    {/* Key Metrics Cards (Shadcn UI) */}
                     <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {/* Cumulative Net Buy Amount */}
-                        <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-lg hover:border-slate-700/80 transition-all duration-300">
-                            <div>
-                                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                    Cumulative Net Amount
-                                </span>
-                                <h3 className={`text-2xl font-extrabold tracking-tight mt-2 ${metrics.totalAmount >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        <Card className="bg-card border-border shadow-lg hover:border-primary/50 transition-all duration-300 rounded-2xl">
+                            <CardHeader className="pb-2">
+                                <CardDescription className="text-muted-foreground text-xs font-semibold uppercase tracking-wider flex items-center gap-1">
+                                    <DollarSign className="w-3.5 h-3.5 text-muted-foreground" /> 누적 순매수 금액
+                                </CardDescription>
+                                <CardTitle className={`text-2xl font-extrabold tracking-tight mt-2.5 ${metrics.totalAmount >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
                                     {formatAmount(metrics.totalAmount)}
-                                </h3>
-                            </div>
-                            <p className="text-slate-500 text-xs mt-4">
-                                Sum of daily transactions over the last {metrics.totalDays} trading days.
-                            </p>
-                        </div>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-muted-foreground text-xs mt-2">
+                                    최근 {metrics.totalDays} 거래일 동안의 일일 순매수 누적 합계 금액입니다.
+                                </p>
+                            </CardContent>
+                        </Card>
 
                         {/* Cumulative Net Buy Quantity */}
-                        <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-lg hover:border-slate-700/80 transition-all duration-300">
-                            <div>
-                                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                    Cumulative Quantity
-                                </span>
-                                <h3 className={`text-2xl font-extrabold tracking-tight mt-2 ${metrics.totalQuantity >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        <Card className="bg-card border-border shadow-lg hover:border-primary/50 transition-all duration-300 rounded-2xl">
+                            <CardHeader className="pb-2">
+                                <CardDescription className="text-muted-foreground text-xs font-semibold uppercase tracking-wider flex items-center gap-1">
+                                    <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" /> 누적 순매수 수량
+                                </CardDescription>
+                                <CardTitle className={`text-2xl font-extrabold tracking-tight mt-2.5 ${metrics.totalQuantity >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
                                     {formatQuantity(metrics.totalQuantity)}
-                                </h3>
-                            </div>
-                            <p className="text-slate-500 text-xs mt-4">
-                                Total net shares purchased (+) or sold (-).
-                            </p>
-                        </div>
-
-                        {/* Average Daily Amount */}
-                        <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-lg hover:border-slate-700/80 transition-all duration-300">
-                            <div>
-                                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                    Average Daily Flow
-                                </span>
-                                <h3 className={`text-2xl font-extrabold tracking-tight mt-2 ${metrics.avgAmount >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                                    {formatAmount(Math.round(metrics.avgAmount))}
-                                </h3>
-                            </div>
-                            <p className="text-slate-500 text-xs mt-4">
-                                Mean transactional value per trading day.
-                            </p>
-                        </div>
-
-                        {/* Buying Days Ratio */}
-                        <div className="bg-slate-900/30 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between shadow-lg hover:border-slate-700/80 transition-all duration-300">
-                            <div>
-                                <span className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                    Net Buying Ratio
-                                </span>
-                                <div className="flex items-baseline gap-2 mt-2">
-                                    <h3 className="text-2xl font-extrabold tracking-tight text-white">
-                                        {metrics.buyRatio.toFixed(1)}%
-                                    </h3>
-                                    <span className="text-xs text-slate-400 font-semibold">
-                                        ({metrics.buyDays} of {metrics.totalDays} days)
-                                    </span>
-                                </div>
-                            </div>
-                            {/* Visual Progress Bar */}
-                            <div className="mt-4">
-                                <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                                    <div 
-                                        className="h-full bg-emerald-500 rounded-full" 
-                                        style={{ width: `${metrics.buyRatio}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        </div>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-muted-foreground text-xs mt-2">
+                                    해당 기간 동안 순매수(+) 또는 순매도(-)한 주식 수의 총합입니다.
+                                </p>
+                            </CardContent>
+                        </Card>
                     </section>
 
                     {/* Chart Panel */}
-                    <section className="bg-slate-900/20 border border-slate-800/60 rounded-3xl p-6 shadow-md flex flex-col gap-4 relative">
+                    <section className="bg-card border border-border rounded-2xl p-6 shadow-md flex flex-col gap-4 relative transition-colors">
                         <div className="flex justify-between items-center">
                             <div>
-                                <h3 className="text-lg font-bold text-white">Net Buying Amount Trend</h3>
-                                <p className="text-slate-400 text-xs mt-0.5">
-                                    Daily net buy amount trend over the selected period
+                                <h3 className="text-lg font-bold text-foreground">순매수 수량 변동 추이</h3>
+                                <p className="text-muted-foreground text-xs mt-1">
+                                    선택한 분석 기간 동안의 일별 국민연금 순매수 수량 변동 그래프
                                 </p>
                             </div>
                             <div className="flex items-center gap-4 text-xs font-semibold">
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500"></span>
-                                    <span className="text-slate-400">Net Buy</span>
+                                    <span className="text-muted-foreground">순매수</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="w-3 h-3 rounded-full bg-rose-500/20 border border-rose-500"></span>
-                                    <span className="text-slate-400">Net Sell</span>
+                                    <span className="text-muted-foreground">순매도</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Custom Interactive SVG Graph */}
-                        <div className="relative bg-slate-950/40 rounded-2xl border border-slate-800/80 p-4 min-h-[300px] flex items-center justify-center">
+                        {/* Shadcn Area Chart */}
+                        <div className="relative bg-background rounded-xl border border-border p-4 min-h-[300px] flex items-center justify-center transition-colors">
                             {chronologicalData.length > 0 ? (
-                                <div className="w-full relative group/chart">
-                                    <svg 
-                                        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                                        className="w-full h-auto overflow-visible select-none"
-                                    >
+                                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                                    <AreaChart data={chronologicalData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
                                         <defs>
-                                            {/* Glow Filters */}
-                                            <filter id="glow-emerald" x="-20%" y="-20%" width="140%" height="140%">
-                                                <feGaussianBlur stdDeviation="6" result="blur" />
-                                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                                            </filter>
-                                            
-                                            {/* Symmetrical Gradient */}
-                                            <linearGradient id="area-gradient" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#10b981" stopOpacity="0.18" />
-                                                <stop offset="50%" stopColor="#10b981" stopOpacity="0.0" />
-                                                <stop offset="50%" stopColor="#f43f5e" stopOpacity="0.0" />
-                                                <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.18" />
+                                            <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset={gradientOffset} stopColor="#10b981" stopOpacity={0.3} />
+                                                <stop offset={gradientOffset} stopColor="#f43f5e" stopOpacity={0.3} />
+                                            </linearGradient>
+                                            <linearGradient id="splitStroke" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset={gradientOffset} stopColor="#10b981" stopOpacity={1} />
+                                                <stop offset={gradientOffset} stopColor="#f43f5e" stopOpacity={1} />
                                             </linearGradient>
                                         </defs>
-
-                                        {/* Grid lines & Y Axis labels */}
-                                        {[maxAbsAmount, maxAbsAmount / 2, 0, -maxAbsAmount / 2, -maxAbsAmount].map((val, idx) => {
-                                            const y = getY(val);
-                                            const isZero = val === 0;
-                                            return (
-                                                <g key={idx}>
-                                                    <line 
-                                                        x1={paddingX} 
-                                                        y1={y} 
-                                                        x2={svgWidth - paddingX} 
-                                                        y2={y} 
-                                                        className={isZero 
-                                                            ? "stroke-slate-600 stroke-1" 
-                                                            : "stroke-slate-800/60 stroke-1 stroke-dasharray-[4_4]"
-                                                        }
-                                                        strokeDasharray={isZero ? undefined : "4 4"}
-                                                    />
-                                                    <text 
-                                                        x={paddingX - 10} 
-                                                        y={y + 4} 
-                                                        className="text-[10px] font-semibold text-slate-500 fill-current font-mono text-right"
-                                                        textAnchor="end"
-                                                    >
-                                                        {Math.round(val).toLocaleString()}M
-                                                    </text>
-                                                </g>
-                                            );
-                                        })}
-
-                                        {/* Chart Fill Area */}
-                                        <path 
-                                            d={areaPath} 
-                                            fill="url(#area-gradient)"
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                                        <XAxis
+                                            dataKey="date"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
+                                            tickFormatter={(value) => `${value.substring(4, 6)}/${value.substring(6, 8)}`}
+                                            stroke="#64748b"
+                                            fontSize={10}
                                         />
-
-                                        {/* Zero Reference Baseline */}
-                                        <line 
-                                            x1={paddingX} 
-                                            y1={zeroY} 
-                                            x2={svgWidth - paddingX} 
-                                            y2={zeroY} 
-                                            className="stroke-slate-700/60 stroke-[1.5]"
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
+                                            tickFormatter={(value) => `${value.toLocaleString()}`}
+                                            stroke="#64748b"
+                                            fontSize={10}
                                         />
-
-                                        {/* Trend Line */}
-                                        <path 
-                                            d={linePath} 
-                                            fill="none" 
-                                            stroke="url(#line-grad)"
-                                            className="stroke-[2.5] stroke-linecap-round"
-                                        />
-                                        <linearGradient id="line-grad" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#34d399" />
-                                            <stop offset="50%" stopColor="#10b981" />
-                                            <stop offset="50%" stopColor="#f43f5e" />
-                                            <stop offset="100%" stopColor="#fb7185" />
-                                        </linearGradient>
-
-                                        {/* Vertical line indicator on hover */}
-                                        {hoveredIndex !== null && (
-                                            <line
-                                                x1={getX(hoveredIndex)}
-                                                y1={paddingY}
-                                                x2={getX(hoveredIndex)}
-                                                y2={svgHeight - paddingY}
-                                                className="stroke-slate-600/80 stroke-1 stroke-dasharray-[2_2]"
-                                                strokeDasharray="2 2"
-                                            />
-                                        )}
-
-                                        {/* Data points markers */}
-                                        {chronologicalData.map((d, idx) => {
-                                            const cx = getX(idx);
-                                            const cy = getY(d.amount);
-                                            const isSelected = hoveredIndex === idx;
-                                            const isPositive = d.amount >= 0;
-                                            
-                                            // Render only some markers to prevent clutter if range is large, but always render on hover
-                                            const shouldRenderMarker = isSelected || chronologicalData.length < 50 || idx === 0 || idx === chronologicalData.length - 1;
-
-                                            if (!shouldRenderMarker) return null;
-
-                                            return (
-                                                <circle
-                                                    key={idx}
-                                                    cx={cx}
-                                                    cy={cy}
-                                                    r={isSelected ? 6 : 3}
-                                                    className={`transition-all duration-150 cursor-pointer ${
-                                                        isSelected 
-                                                            ? isPositive 
-                                                                ? "fill-emerald-400 stroke-slate-950 stroke-[3px]" 
-                                                                : "fill-rose-400 stroke-slate-950 stroke-[3px]"
-                                                            : isPositive 
-                                                                ? "fill-emerald-500/80 stroke-none" 
-                                                                : "fill-rose-500/80 stroke-none"
-                                                    }`}
+                                        <ChartTooltip
+                                            cursor={{ stroke: '#64748b', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                            content={
+                                                <ChartTooltipContent
+                                                    className="bg-card border-border shadow-xl text-foreground"
+                                                    formatter={(value, name, item, index) => (
+                                                        <div className="flex flex-col gap-1.5 w-full min-w-[140px]">
+                                                            <div className="flex justify-between items-center w-full">
+                                                                <span className="text-muted-foreground">순매수액:</span>
+                                                                <span className={`font-bold font-mono ${item.payload.amount >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
+                                                                    {formatAmount(item.payload.amount)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center w-full">
+                                                                <span className="text-muted-foreground">순매수량:</span>
+                                                                <span className={`font-medium font-mono ${Number(value) >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
+                                                                    {formatQuantity(Number(value))}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 />
-                                            );
-                                        })}
-
-                                        {/* X-axis date labels */}
-                                        {(() => {
-                                            const totalPoints = chronologicalData.length;
-                                            if (totalPoints === 0) return null;
-
-                                            // Determine interval for labels based on period size
-                                            let step = Math.ceil(totalPoints / 6);
-                                            if (step === 0) step = 1;
-
-                                            const labels = [];
-                                            for (let i = 0; i < totalPoints; i += step) {
-                                                labels.push(i);
                                             }
-                                            // Always include last item if not already included
-                                            if (labels[labels.length - 1] !== totalPoints - 1) {
-                                                labels.push(totalPoints - 1);
-                                            }
-
-                                            return labels.map((idx) => {
-                                                const d = chronologicalData[idx];
-                                                if (!d) return null;
-                                                return (
-                                                    <text
-                                                        key={idx}
-                                                        x={getX(idx)}
-                                                        y={svgHeight - paddingY + 18}
-                                                        className="text-[9px] font-bold text-slate-500 fill-current font-mono text-center"
-                                                        textAnchor="middle"
-                                                    >
-                                                        {d.date.substring(4, 6)}/{d.date.substring(6, 8)}
-                                                    </text>
-                                                );
-                                            });
-                                        })()}
-
-                                        {/* Interactive Hover Overlay Bars */}
-                                        {chronologicalData.map((d, idx) => {
-                                            const barWidth = chartWidth / Math.max(chronologicalData.length, 1);
-                                            const cx = getX(idx);
-                                            return (
-                                                <rect
-                                                    key={idx}
-                                                    x={cx - barWidth / 2}
-                                                    y={paddingY}
-                                                    width={barWidth}
-                                                    height={chartHeight}
-                                                    fill="transparent"
-                                                    className="cursor-pointer"
-                                                    onMouseEnter={() => setHoveredIndex(idx)}
-                                                    onMouseLeave={() => setHoveredIndex(null)}
-                                                />
-                                            );
-                                        })}
-                                    </svg>
-
-                                    {/* HTML Tooltip relative to container */}
-                                    {hoveredIndex !== null && chronologicalData[hoveredIndex] && (
-                                        <div 
-                                            className="absolute bg-slate-900/95 border border-slate-700/80 backdrop-blur-md rounded-xl p-3 shadow-2xl z-20 pointer-events-none flex flex-col gap-1 w-48 text-xs transition-all duration-75"
-                                            style={{
-                                                left: `${Math.min(
-                                                    Math.max(10, (getX(hoveredIndex) / svgWidth) * 100 - 10), // offset left by 10%
-                                                    80 // limit right edge overflow
-                                                )}%`,
-                                                top: `${Math.max(10, (getY(chronologicalData[hoveredIndex].amount) / svgHeight) * 100 - 32)}%`, // position above the point
-                                            }}
-                                        >
-                                            <span className="font-bold text-slate-300 border-b border-slate-800 pb-1 mb-1">
-                                                {formatDate(chronologicalData[hoveredIndex].date)}
-                                            </span>
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-500">Amount:</span>
-                                                <span className={`font-bold font-mono ${chronologicalData[hoveredIndex].amount >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                                                    {formatAmount(chronologicalData[hoveredIndex].amount)}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-slate-500">Quantity:</span>
-                                                <span className={`font-medium font-mono ${chronologicalData[hoveredIndex].quantity >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                                                    {formatQuantity(chronologicalData[hoveredIndex].quantity)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                        />
+                                        <ReferenceLine y={0} stroke="#475569" strokeWidth={1} />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="quantity"
+                                            stroke="url(#splitStroke)"
+                                            strokeWidth={2}
+                                            fill="url(#splitColor)"
+                                        />
+                                    </AreaChart>
+                                </ChartContainer>
                             ) : (
-                                <p className="text-slate-500 text-sm font-semibold">No history data available.</p>
+                                <p className="text-slate-500 text-sm font-semibold">거래 데이터가 존재하지 않습니다.</p>
                             )}
                         </div>
                     </section>
 
                     {/* Historical Table */}
-                    <section className="bg-slate-900/20 border border-slate-800/60 rounded-3xl p-6 shadow-md">
+                    <section className="bg-card border border-border rounded-2xl p-6 shadow-md transition-colors">
                         <div className="mb-6">
-                            <h3 className="text-lg font-bold text-white">Daily Net Buy Logs</h3>
-                            <p className="text-slate-400 text-xs mt-0.5">
-                                Showing trading history records in chronological detail
+                            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                                <History className="w-4 h-4 text-muted-foreground" /> 일자별 매매 상세 기록
+                            </h3>
+                            <p className="text-muted-foreground text-xs mt-1">
+                                해당 분석 기간 동안의 일별 거래 현황입니다.
                             </p>
                         </div>
 
-                        <div className="overflow-x-auto rounded-2xl border border-slate-800/80 bg-slate-950/40">
-                            <table className="w-full border-collapse text-left text-sm">
-                                <thead>
-                                    <tr className="border-b border-slate-800 text-slate-400 font-semibold bg-slate-900/30">
-                                        <th className="py-4 px-6">Trading Date</th>
-                                        <th className="py-4 px-6 text-right">Net Buy Quantity</th>
-                                        <th className="py-4 px-6 text-right">Net Buy Amount</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-800/60">
+                        <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>거래일자</TableHead>
+                                        <TableHead className="text-right">순매수 수량</TableHead>
+                                        <TableHead className="text-right">순매수 금액</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
                                     {data.length > 0 ? (
                                         data.map((item) => {
                                             const isNetBuy = item.amount >= 0;
                                             return (
-                                                <tr
-                                                    key={item.date}
-                                                    className="hover:bg-slate-800/30 transition-colors group duration-150"
-                                                >
-                                                    <td className="py-3.5 px-6 font-semibold text-slate-300 group-hover:text-white">
+                                                <TableRow key={item.date}>
+                                                    <TableCell className="font-medium text-muted-foreground">
                                                         {formatDate(item.date)}
-                                                    </td>
-                                                    <td className={`py-3.5 px-6 text-right font-medium font-mono ${item.quantity >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                                                    </TableCell>
+                                                    <TableCell className={`text-right font-medium font-mono ${item.quantity >= 0 ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
                                                         {formatQuantity(item.quantity)}
-                                                    </td>
-                                                    <td className={`py-3.5 px-6 text-right font-bold font-mono ${isNetBuy ? "text-emerald-400" : "text-rose-400"}`}>
+                                                    </TableCell>
+                                                    <TableCell className={`text-right font-bold font-mono ${isNetBuy ? "text-emerald-500 dark:text-emerald-400" : "text-rose-500 dark:text-rose-400"}`}>
                                                         {formatAmount(item.amount)}
-                                                    </td>
-                                                </tr>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })
                                     ) : (
-                                        <tr>
-                                            <td colSpan={3} className="py-12 text-center text-slate-500 font-medium">
-                                                No trading data found for this company.
-                                            </td>
-                                        </tr>
+                                        <TableRow>
+                                            <TableCell colSpan={3} className="h-24 text-center">
+                                                해당 기간 내 국민연금 거래 상세 정보가 존재하지 않습니다.
+                                            </TableCell>
+                                        </TableRow>
                                     )}
-                                </tbody>
-                            </table>
+                                </TableBody>
+                            </Table>
                         </div>
                     </section>
                 </div>

@@ -11,8 +11,8 @@ const supabase = createClient(
 
 export function meta({ data }: any) {
     return [
-        { title: "NPS Today - Company Dashboard" },
-        { name: "description", content: "Company-specific National Pension Service (NPS) Net Buying Trends" },
+        { title: "국민연금 투데이 - 기업 상세 분석" },
+        { name: "description", content: "국민연금공단(NPS) 기업별 상세 분석 및 거래 변동 추이 대시보드" },
     ];
 }
 
@@ -79,7 +79,7 @@ export default function CompanyRoute() {
                     .maybeSingle();
 
                 if (nameErr) throw nameErr;
-                
+
                 if (companyData) {
                     setCompanyName(companyData.name);
                 } else {
@@ -123,11 +123,11 @@ export default function CompanyRoute() {
 
     if (initialLoading) {
         return (
-            <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+            <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-                    <p className="text-slate-400 text-sm font-medium animate-pulse">
-                        Analyzing company transaction history...
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
+                    <p className="text-muted-foreground text-sm font-medium animate-pulse">
+                        기업 거래 기록 분석 중...
                     </p>
                 </div>
             </div>
@@ -136,20 +136,20 @@ export default function CompanyRoute() {
 
     if (error || !companyId) {
         return (
-            <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans">
-                <div className="max-w-md w-full bg-slate-900 border border-red-500/20 rounded-2xl p-6 text-center shadow-xl">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 text-red-400 mb-4">
+            <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors">
+                <div className="max-w-md w-full bg-card text-card-foreground border border-border rounded-2xl p-6 text-center shadow-xl">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
                         </svg>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-200">Error Loading Company Dashboard</h3>
-                    <p className="text-slate-400 text-sm mt-2 mb-6">{error || "Invalid Company ID"}</p>
+                    <h3 className="text-lg font-semibold text-foreground">데이터 로드 오류</h3>
+                    <p className="text-muted-foreground text-sm mt-2 mb-6">{error || "잘못된 기업 ID"}</p>
                     <Link
                         to="/"
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors inline-block"
+                        className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 dark:bg-yellow-600 dark:hover:bg-yellow-500 active:bg-yellow-600 dark:active:bg-yellow-750 text-white dark:text-zinc-950 rounded-lg text-sm font-semibold transition-colors inline-block"
                     >
-                        Go back Home
+                        홈으로 돌아가기
                     </Link>
                 </div>
             </div>
@@ -157,7 +157,7 @@ export default function CompanyRoute() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500/30">
+        <div className="min-h-screen font-sans antialiased selection:bg-emerald-500/30 transition-colors">
             <CompanyDashboard
                 companyId={companyId}
                 companyName={companyName}

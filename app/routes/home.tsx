@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { useState, useEffect, useMemo } from "react"
 import { useSearchParams } from "react-router";
 import DayDashboard from "../../components/dashboard/day";
+import { ThemeToggle } from "../components/theme-toggle";
+import { COMPANY_LIST_TABLE, FUND_NET_BUY_TABLE } from "../../constants";
+import Header from "../../components/header";
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
 
@@ -16,8 +19,8 @@ function getTodayDate() {
 
 export function meta({ }: Route.MetaArgs) {
   return [
-    { title: "NPS Today - KOSPI Net Buy Dashboard" },
-    { name: "description", content: "Daily National Pension Service (NPS) Net Buying Trends for KOSPI Stocks" },
+    { title: "NPS today" },
+    { name: "description", content: "국민연금공단(NPS) 코스피 주식 일별 동향 대시보드" },
   ];
 }
 
@@ -53,14 +56,13 @@ export default function Home() {
         setInitialLoading(true);
         setError(null);
 
-        // Fetch all distinct dates by scanning in pages (since Supabase limits results to 1000 rows)
         let allDates: string[] = [];
         let start = 0;
         const step = 1000;
 
         while (true) {
           const { data, error } = await supabase
-            .from("kospi_fund_net_buy")
+            .from(FUND_NET_BUY_TABLE)
             .select("date")
             .range(start, start + step - 1);
 
@@ -75,12 +77,12 @@ export default function Home() {
         const sortedDistinctDates = Array.from(new Set(allDates)).sort();
         setAvailableDates(sortedDistinctDates);
 
-        // Fetch company list
         const { data: companyData, error: companyErr } = await supabase
-          .from("company_list")
+          .from(COMPANY_LIST_TABLE)
           .select();
 
         if (companyErr) throw companyErr;
+
         setCompanies(companyData || []);
       } catch (err: any) {
         console.error("Error loading config:", err);
@@ -135,10 +137,10 @@ export default function Home() {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-          <p className="text-slate-400 text-sm font-medium animate-pulse">Initializing dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
+          <p className="text-muted-foreground text-sm font-medium animate-pulse">대시보드 초기화 중...</p>
         </div>
       </div>
     );
@@ -146,20 +148,20 @@ export default function Home() {
 
   if (error && !availableDates.length) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-900 border border-red-500/20 rounded-2xl p-6 text-center shadow-xl">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 text-red-400 mb-4">
+      <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
+        <div className="max-w-md w-full bg-card text-card-foreground border border-border rounded-2xl p-6 text-center shadow-xl">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 mb-4">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-slate-200">Error Loading Dashboard</h3>
-          <p className="text-slate-400 text-sm mt-2 mb-6">{error}</p>
+          <h3 className="text-lg font-semibold text-foreground">대시보드 로드 오류</h3>
+          <p className="text-muted-foreground text-sm mt-2 mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+            className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 dark:bg-yellow-600 dark:hover:bg-yellow-500 active:bg-yellow-600 dark:active:bg-yellow-750 text-white dark:text-zinc-950 rounded-lg text-sm font-semibold transition-colors"
           >
-            Retry
+            다시 시도
           </button>
         </div>
       </div>
@@ -167,7 +169,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500/30">
+    <div className="min-h-screen font-sans antialiased selection:bg-emerald-500/30 transition-colors">
       <DayDashboard
         data={data}
         companies={companies}
