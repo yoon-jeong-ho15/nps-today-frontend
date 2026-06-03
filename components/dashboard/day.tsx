@@ -321,7 +321,7 @@ export default function DayDashboard({
                                                     </TableCell>
                                                     <TableCell className="font-bold">
                                                         <Link
-                                                            to={`/company?id=${item.company_id}`}
+                                                            to={`/company/${item.company_id}`}
                                                             className="hover:underline hover:text-primary flex items-center gap-1 transition-colors"
                                                         >
                                                             {item.company_name}

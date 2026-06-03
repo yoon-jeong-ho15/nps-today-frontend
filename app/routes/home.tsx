@@ -1,184 +1,70 @@
 import type { Route } from "./+types/home";
-import { createClient } from "@supabase/supabase-js";
-import { useState, useEffect, useMemo } from "react"
-import { useSearchParams } from "react-router";
-import DayDashboard from "../../components/dashboard/day";
+import { Link } from "react-router";
+import { Calendar, Building2, TrendingUp, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "../components/theme-toggle";
-import { COMPANY_LIST_TABLE, FUND_NET_BUY_TABLE } from "../../constants";
-import Header from "../../components/header";
-
-const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-
-function getTodayDate() {
-  const dateObject = new Date();
-  const year = dateObject.getFullYear().toString();
-  const month = (dateObject.getMonth() + 1).toString().padStart(2, "0");
-  const date = dateObject.getDate().toString().padStart(2, "0");
-  return year + month + date;
-}
 
 export function meta({ }: Route.MetaArgs) {
   return [
-    { title: "NPS today" },
-    { name: "description", content: "국민연금공단(NPS) 코스피 주식 일별 동향 대시보드" },
+    { title: "NPS today - 국민연금 코스피 거래 동향" },
+    { name: "description", content: "국민연금공단(NPS)의 코스피 주식 거래 동향 및 기업별 매매 분석 대시보드" },
   ];
 }
 
-interface NetBuyRecord {
-  date: string;
-  company_id: string;
-  quantity: number;
-  amount: number;
-}
-
-interface Company {
-  id: string;
-  name: string;
-}
-
 export default function Home() {
-  const [data, setData] = useState<NetBuyRecord[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [dataLoading, setDataLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const todayDate = getTodayDate();
-  const dateParam = searchParams.get("date");
-
-  // 1. Fetch initial configuration: distinct dates and companies
-  useEffect(() => {
-    async function loadConfig() {
-      try {
-        setInitialLoading(true);
-        setError(null);
-
-        let allDates: string[] = [];
-        let start = 0;
-        const step = 1000;
-
-        while (true) {
-          const { data, error } = await supabase
-            .from(FUND_NET_BUY_TABLE)
-            .select("date")
-            .range(start, start + step - 1);
-
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-
-          allDates.push(...data.map(d => d.date));
-          if (data.length < step) break;
-          start += step;
-        }
-
-        const sortedDistinctDates = Array.from(new Set(allDates)).sort();
-        setAvailableDates(sortedDistinctDates);
-
-        const { data: companyData, error: companyErr } = await supabase
-          .from(COMPANY_LIST_TABLE)
-          .select();
-
-        if (companyErr) throw companyErr;
-
-        setCompanies(companyData || []);
-      } catch (err: any) {
-        console.error("Error loading config:", err);
-        setError(err.message || "Failed to initialize dashboard configuration");
-      } finally {
-        setInitialLoading(false);
-      }
-    }
-
-    loadConfig();
-  }, [todayDate]);
-
-  // Derived selectedDate from search params, falling back to latest database date
-  const selectedDate = useMemo(() => {
-    if (dateParam) {
-      return dateParam;
-    }
-    if (availableDates.length > 0) {
-      return availableDates[availableDates.length - 1];
-    }
-    return todayDate;
-  }, [dateParam, availableDates, todayDate]);
-
-  // 2. Fetch data for the selected date when it changes
-  useEffect(() => {
-    if (!selectedDate) return;
-
-    async function loadDateData() {
-      try {
-        setDataLoading(true);
-        const { data: dayData, error: dayErr } = await supabase
-          .from("kospi_fund_net_buy")
-          .select()
-          .eq("date", selectedDate);
-
-        if (dayErr) throw dayErr;
-        setData(dayData || []);
-      } catch (err: any) {
-        console.error("Error loading date data:", err);
-        setError(err.message || "Failed to load data for selected date");
-      } finally {
-        setDataLoading(false);
-      }
-    }
-
-    loadDateData();
-  }, [selectedDate]);
-
-  const handleDateChange = (newDate: string) => {
-    setSearchParams({ date: newDate });
-  };
-
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
-          <p className="text-muted-foreground text-sm font-medium animate-pulse">대시보드 초기화 중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && !availableDates.length) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
-        <div className="max-w-md w-full bg-card text-card-foreground border border-border rounded-2xl p-6 text-center shadow-xl">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-foreground">대시보드 로드 오류</h3>
-          <p className="text-muted-foreground text-sm mt-2 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 dark:bg-yellow-600 dark:hover:bg-yellow-500 active:bg-yellow-600 dark:active:bg-yellow-750 text-white dark:text-zinc-950 rounded-lg text-sm font-semibold transition-colors"
-          >
-            다시 시도
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen font-sans antialiased selection:bg-emerald-500/30 transition-colors">
-      <DayDashboard
-        data={data}
-        companies={companies}
-        selectedDate={selectedDate}
-        availableDates={availableDates}
-        onChangeDate={handleDateChange}
-        todayDate={todayDate}
-        dataLoading={dataLoading}
-      />
+    <div className="min-h-screen bg-linear-to-b from-background to-muted/30 font-sans antialiased flex flex-col transition-colors duration-300">
+
+      {/* Hero Section */}
+      <main className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-6 py-12 text-center">
+        <div className="animate-fade-in flex flex-col items-center">
+          <h1 className="text-4xl sm:text-6xl font-extrabold text-foreground tracking-tight leading-none mb-6">
+            오늘의 <span className="bg-linear-to-r from-yellow-500 to-amber-500 bg-clip-text text-transparent">국민연금</span> 동향
+          </h1>
+          <p className="text-muted-foreground text-base sm:text-xl max-w-2xl mb-12 leading-relaxed">
+            국민연금공단(NPS)의 코스피 시장 일별 매수/매도 규모를 파악하고, <br className="hidden sm:inline" />
+            개별 기업에 대한 국민연금의 실시간 누적 매매 추이를 한눈에 분석해 보세요.
+          </p>
+        </div>
+
+        {/* Navigation Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-3xl">
+          {/* Daily Trends Card */}
+
+          <Link
+            to="/company"
+            className="group relative 
+            bg-card hover:bg-muted/40 
+            border border-border 
+            hover:border-emerald-500/50 
+            rounded-3xl p-8 text-left shadow-lg 
+            hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
+          >
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 border border-emerald-500/10">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-3 flex items-center gap-1.5">
+                기업별 매매 분석
+                <ChevronRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                개별 기업을 선택하여 국민연금의 최근 누적 매매 추이 및 일자별 상세 거래 기록을 확인합니다.
+              </p>
+            </div>
+            <div className="mt-8 pt-4 border-t border-border/50 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              상세 분석 바로가기 <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="py-8 border-t border-border/40 text-center">
+        <p className="text-xs text-muted-foreground/60">
+          © {new Date().getFullYear()} NPS Today. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }

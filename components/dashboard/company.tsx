@@ -141,7 +141,7 @@ export default function CompanyDashboard({
     const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const id = e.target.value;
         if (id) {
-            navigate(`/company?id=${id}`);
+            navigate(`/company/${id}`);
         }
     };
 
@@ -151,13 +151,6 @@ export default function CompanyDashboard({
             <header className="bg-card/70 backdrop-blur-md border border-border rounded-2xl p-6 sm:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 shadow-xl transition-colors">
                 <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-3">
-                        <Link
-                            to="/"
-                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-full text-xs font-semibold tracking-wider transition-colors cursor-pointer"
-                        >
-                            <ArrowLeft className="w-3.5 h-3.5" />
-                            목록으로
-                        </Link>
                         <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 border border-yellow-500/25 rounded-full text-xs font-semibold tracking-wider">
                             기업별 상세 분석
                         </span>
