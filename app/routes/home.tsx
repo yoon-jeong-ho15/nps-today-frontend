@@ -25,38 +25,6 @@ export default function Home() {
             개별 기업에 대한 국민연금의 실시간 누적 매매 추이를 한눈에 분석해 보세요.
           </p>
         </div>
-
-        {/* Navigation Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-3xl">
-          {/* Daily Trends Card */}
-
-          <Link
-            to="/company"
-            className="group relative 
-            bg-card hover:bg-muted/40 
-            border border-border 
-            hover:border-emerald-500/50 
-            rounded-3xl p-8 text-left shadow-lg 
-            hover:shadow-xl transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer"
-          >
-            <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
-            <div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-6 border border-emerald-500/10">
-                <Building2 className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-bold text-foreground mb-3 flex items-center gap-1.5">
-                기업별 매매 분석
-                <ChevronRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-              </h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                개별 기업을 선택하여 국민연금의 최근 누적 매매 추이 및 일자별 상세 거래 기록을 확인합니다.
-              </p>
-            </div>
-            <div className="mt-8 pt-4 border-t border-border/50 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              상세 분석 바로가기 <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-            </div>
-          </Link>
-        </div>
       </main>
 
       {/* Footer */}
