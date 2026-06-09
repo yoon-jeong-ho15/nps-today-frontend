@@ -25,6 +25,7 @@ export const links: Route.LinksFunction = () => [
 
 import { ThemeProvider } from "./components/theme-provider";
 import Header from "../components/header";
+import Footer from "../components/footer";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -39,6 +40,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <ThemeProvider defaultTheme="light" storageKey="nps-ui-theme">
           <Header />
           {children}
+          <Footer />
         </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
