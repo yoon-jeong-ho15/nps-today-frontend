@@ -1,69 +1,23 @@
 import type { Route } from "./+types/company-list";
-import { createClient } from "@supabase/supabase-js";
-import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { Building2, Search, ArrowLeft, ChevronRight } from "lucide-react";
-import { ThemeToggle } from "../components/theme-toggle";
+import { Search, ChevronRight } from "lucide-react";
+import { useCompanyListData } from "~/hooks/useCompanyListData";
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-);
-
-export function meta({ }: Route.MetaArgs) {
+export function meta({}: Route.MetaArgs) {
   return [
     { title: "NPS Today - 기업 목록" },
     { name: "description", content: "국민연금공단(NPS) 거래 데이터를 확인할 수 있는 코스피 상장 기업 목록입니다." },
   ];
 }
 
-interface Company {
-  id: string;
-  name: string;
-}
-
 export default function CompanyListRoute() {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadCompanies() {
-      try {
-        setLoading(true);
-        setError(null);
-        const { data, error: companyErr } = await supabase
-          .from("company_list")
-          .select();
-
-        if (companyErr) throw companyErr;
-        setCompanies(data || []);
-      } catch (err: any) {
-        console.error("Error loading companies:", err);
-        setError(err.message || "Failed to load companies list.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadCompanies();
-  }, []);
-
-  // Filter and sort companies
-  const filteredCompanies = useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-    let result = [...companies];
-
-    if (term !== "") {
-      result = result.filter(
-        (c) => c.name.toLowerCase().includes(term) || c.id.includes(term)
-      );
-    }
-
-    // Alphabetical sort by name
-    return result.sort((a, b) => a.name.localeCompare(b.name, "ko"));
-  }, [companies, searchTerm]);
+  const {
+    filteredCompanies,
+    searchTerm,
+    setSearchTerm,
+    loading,
+    error,
+  } = useCompanyListData();
 
   if (loading) {
     return (
@@ -78,7 +32,6 @@ export default function CompanyListRoute() {
 
   return (
     <div className="min-h-screen bg-linear-to-b from-background to-muted/20 font-sans antialiased flex flex-col transition-colors duration-300">
-
       {/* Main Content */}
       <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-10 flex flex-col gap-6">
         {/* Search Bar */}

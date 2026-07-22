@@ -1,15 +1,7 @@
 import type { Route } from "./+types/date-list";
-import { createClient } from "@supabase/supabase-js";
-import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router";
-import { Calendar, ChevronRight, ArrowLeft } from "lucide-react";
-import { ThemeToggle } from "../components/theme-toggle";
-import { FUND_NET_BUY_TABLE } from "../../constants";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-);
+import { formatDateDisplay, formatMonthName } from "~/lib/format";
+import { useDateListData } from "~/hooks/useDateListData";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -22,80 +14,8 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-function formatDateDisplay(dateStr: string) {
-  if (!dateStr || dateStr.length !== 8) return dateStr;
-  const day = parseInt(dateStr.substring(6, 8), 10);
-  return `${day}일`;
-}
-
-function formatMonthName(monthStr: string) {
-  const month = parseInt(monthStr, 10);
-  return `${month}월`;
-}
-
 export default function DateListRoute() {
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadDates() {
-      try {
-        setLoading(true);
-        setError(null);
-        let allDates: string[] = [];
-        let start = 0;
-        const step = 1000;
-
-        while (true) {
-          const { data, error } = await supabase
-            .from(FUND_NET_BUY_TABLE)
-            .select("date")
-            .range(start, start + step - 1);
-
-          if (error) throw error;
-          if (!data || data.length === 0) break;
-
-          allDates.push(...data.map((d) => d.date));
-          if (data.length < step) break;
-          start += step;
-        }
-
-        const sortedDistinctDates = Array.from(new Set(allDates)).sort((a, b) =>
-          a.localeCompare(b),
-        ); // Descending order (recent first)
-        setAvailableDates(sortedDistinctDates);
-      } catch (err: any) {
-        console.error("Error loading dates:", err);
-        setError(err.message || "Failed to load available dates.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDates();
-  }, []);
-
-  const groupedDates = useMemo(() => {
-    const groups: Record<string, Record<string, string[]>> = {};
-
-    availableDates.forEach((dateStr) => {
-      if (dateStr.length === 8) {
-        const year = dateStr.substring(0, 4);
-        const month = dateStr.substring(4, 6);
-
-        if (!groups[year]) {
-          groups[year] = {};
-        }
-        if (!groups[year][month]) {
-          groups[year][month] = [];
-        }
-        groups[year][month].push(dateStr);
-      }
-    });
-
-    return groups;
-  }, [availableDates]);
+  const { availableDates, groupedDates, loading, error } = useDateListData();
 
   if (loading) {
     return (

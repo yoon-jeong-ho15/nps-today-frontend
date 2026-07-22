@@ -1,13 +1,7 @@
 import type { Route } from "./+types/company-detail";
-import { createClient } from "@supabase/supabase-js";
-import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router";
+import { useParams, Link } from "react-router";
 import CompanyDashboard from "../../components/dashboard/company";
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-);
+import { useCompanyDetailData } from "~/hooks/useCompanyDetailData";
 
 export function meta({ params }: Route.MetaArgs) {
   return [
@@ -16,109 +10,18 @@ export function meta({ params }: Route.MetaArgs) {
   ];
 }
 
-interface NetBuyRecord {
-  date: string;
-  company_id: string;
-  quantity: number;
-  amount: number;
-}
-
-interface Company {
-  id: string;
-  name: string;
-}
-
 export default function CompanyDetailRoute() {
   const { id: companyId } = useParams();
-  const navigate = useNavigate();
-
-  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
-  const [historicalData, setHistoricalData] = useState<NetBuyRecord[]>([]);
-  const [rangeDays, setRangeDays] = useState<number>(30); // Default to 30 days
-  const [companyName, setCompanyName] = useState<string>("");
-
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [dataLoading, setDataLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // 1. Load the initial company list (done once)
-  useEffect(() => {
-    async function loadCompanies() {
-      try {
-        const { data, error: companyErr } = await supabase
-          .from("company_list")
-          .select();
-
-        if (companyErr) throw companyErr;
-        setAllCompanies(data || []);
-      } catch (err: any) {
-        console.error("Error loading company list:", err);
-      }
-    }
-    loadCompanies();
-  }, []);
-
-  // 2. Load company info and full history when companyId changes
-  useEffect(() => {
-    if (!companyId) {
-      setError("No company ID provided. Please select a company from the list page.");
-      setInitialLoading(false);
-      return;
-    }
-
-    async function loadCompanyData() {
-      try {
-        setInitialLoading(true);
-        setError(null);
-
-        // Fetch company details
-        const { data: companyData, error: nameErr } = await supabase
-          .from("company_list")
-          .select("name")
-          .eq("id", companyId)
-          .maybeSingle();
-
-        if (nameErr) throw nameErr;
-
-        if (companyData) {
-          setCompanyName(companyData.name);
-        } else {
-          setCompanyName(`Unknown Company`);
-        }
-
-        // Fetch historical buy/sell records (maximum 365 records)
-        const { data: records, error: recordsErr } = await supabase
-          .from("kospi_fund_net_buy")
-          .select()
-          .eq("company_id", companyId)
-          .order("date", { ascending: false })
-          .limit(365);
-
-        if (recordsErr) throw recordsErr;
-        setHistoricalData(records || []);
-      } catch (err: any) {
-        console.error("Error loading company dashboard data:", err);
-        setError(err.message || "Failed to load company transactions dashboard");
-      } finally {
-        setInitialLoading(false);
-      }
-    }
-
-    loadCompanyData();
-  }, [companyId]);
-
-  // 3. Slice the historical data based on the selected range in memory
-  const displayedData = useMemo(() => {
-    return historicalData.slice(0, rangeDays);
-  }, [historicalData, rangeDays]);
-
-  const handleRangeChange = (days: number) => {
-    setDataLoading(true);
-    setRangeDays(days);
-    setTimeout(() => {
-      setDataLoading(false);
-    }, 150);
-  };
+  const {
+    allCompanies,
+    historicalData,
+    companyName,
+    rangeDays,
+    handleRangeChange,
+    initialLoading,
+    dataLoading,
+    error,
+  } = useCompanyDetailData(companyId);
 
   if (initialLoading) {
     return (
@@ -161,7 +64,7 @@ export default function CompanyDetailRoute() {
         companyId={companyId}
         companyName={companyName}
         allCompanies={allCompanies}
-        data={displayedData}
+        data={historicalData}
         rangeDays={rangeDays}
         onRangeChange={handleRangeChange}
         dataLoading={dataLoading}
