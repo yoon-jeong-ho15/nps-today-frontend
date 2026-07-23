@@ -1,6 +1,6 @@
 import type { Route } from "./+types/company-detail";
 import { useParams, Link } from "react-router";
-import CompanyDashboard from "../../components/dashboard/company";
+import CompanyDashboard from "../components/dashboard/company";
 import { useCompanyDetailData } from "~/hooks/useCompanyDetailData";
 
 export function meta({ params }: Route.MetaArgs) {

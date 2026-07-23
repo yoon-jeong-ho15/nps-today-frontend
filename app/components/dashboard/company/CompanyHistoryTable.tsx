@@ -39,20 +39,18 @@ export function CompanyHistoryTable({ data }: CompanyHistoryTableProps) {
                       {formatDate(item.date)}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-medium font-mono ${
-                        item.quantity >= 0
-                          ? "text-emerald-500 dark:text-emerald-400"
-                          : "text-rose-500 dark:text-rose-400"
-                      }`}
+                      className={`text-right font-medium font-mono ${item.quantity >= 0
+                        ? "text-emerald-500 dark:text-emerald-400"
+                        : "text-rose-500 dark:text-rose-400"
+                        }`}
                     >
                       {formatQuantity(item.quantity)}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-bold font-mono ${
-                        isNetBuy
-                          ? "text-emerald-500 dark:text-emerald-400"
-                          : "text-rose-500 dark:text-rose-400"
-                      }`}
+                      className={`text-right font-bold font-mono ${isNetBuy
+                        ? "text-emerald-500 dark:text-emerald-400"
+                        : "text-rose-500 dark:text-rose-400"
+                        }`}
                     >
                       {formatAmount(item.amount)}
                     </TableCell>

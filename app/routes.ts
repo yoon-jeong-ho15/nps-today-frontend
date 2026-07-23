@@ -6,4 +6,5 @@ export default [
   route("date/:date", "routes/date-detail.tsx"),
   route("company", "routes/company-list.tsx"),
   route("company/:id", "routes/company-detail.tsx"),
+  route("trend", "routes/trend.tsx"),
 ] satisfies RouteConfig;

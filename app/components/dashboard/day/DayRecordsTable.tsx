@@ -119,24 +119,22 @@ export function DayRecordsTable({ selectedRecords }: DayRecordsTableProps) {
                       {item.company_id}
                     </TableCell>
                     <TableCell
-                      className={`hidden md:table-cell text-right font-medium font-mono ${
-                        isNonTouched
-                          ? "text-muted-foreground"
-                          : item.quantity >= 0
+                      className={`hidden md:table-cell text-right font-medium font-mono ${isNonTouched
+                        ? "text-muted-foreground"
+                        : item.quantity >= 0
                           ? "text-emerald-500 dark:text-emerald-400"
                           : "text-rose-500 dark:text-rose-400"
-                      }`}
+                        }`}
                     >
                       {formatQuantity(item.quantity)}
                     </TableCell>
                     <TableCell
-                      className={`text-right font-bold font-mono ${
-                        isNonTouched
-                          ? "text-muted-foreground"
-                          : isNetBuy
+                      className={`text-right font-bold font-mono ${isNonTouched
+                        ? "text-muted-foreground"
+                        : isNetBuy
                           ? "text-emerald-500 dark:text-emerald-400"
                           : "text-rose-500 dark:text-rose-400"
-                      }`}
+                        }`}
                     >
                       {formatAmount(item.amount)}
                     </TableCell>

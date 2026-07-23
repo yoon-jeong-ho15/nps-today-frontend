@@ -18,11 +18,10 @@ export function CompanyMetricsGrid({ metrics }: CompanyMetricsGridProps) {
             <DollarSign className="w-3.5 h-3.5 text-muted-foreground" /> 누적 순매수 금액
           </CardDescription>
           <CardTitle
-            className={`text-2xl font-extrabold tracking-tight mt-2.5 ${
-              metrics.totalAmount >= 0
-                ? "text-emerald-500 dark:text-emerald-400"
-                : "text-rose-500 dark:text-rose-400"
-            }`}
+            className={`text-2xl font-extrabold tracking-tight mt-2.5 ${metrics.totalAmount >= 0
+              ? "text-emerald-500 dark:text-emerald-400"
+              : "text-rose-500 dark:text-rose-400"
+              }`}
           >
             {formatAmount(metrics.totalAmount)}
           </CardTitle>
@@ -41,11 +40,10 @@ export function CompanyMetricsGrid({ metrics }: CompanyMetricsGridProps) {
             <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" /> 누적 순매수 수량
           </CardDescription>
           <CardTitle
-            className={`text-2xl font-extrabold tracking-tight mt-2.5 ${
-              metrics.totalQuantity >= 0
-                ? "text-emerald-500 dark:text-emerald-400"
-                : "text-rose-500 dark:text-rose-400"
-            }`}
+            className={`text-2xl font-extrabold tracking-tight mt-2.5 ${metrics.totalQuantity >= 0
+              ? "text-emerald-500 dark:text-emerald-400"
+              : "text-rose-500 dark:text-rose-400"
+              }`}
           >
             {formatQuantity(metrics.totalQuantity)}
           </CardTitle>

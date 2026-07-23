@@ -1,6 +1,6 @@
 import type { Route } from "./+types/date-detail";
 import { useParams, useNavigate } from "react-router";
-import DayDashboard from "../../components/dashboard/day";
+import DayDashboard from "../components/dashboard/day";
 import { useDateDetailData } from "~/hooks/useDateDetailData";
 
 export function meta({ params }: Route.MetaArgs) {

@@ -18,11 +18,10 @@ export function DayMetricsGrid({ metrics }: DayMetricsGridProps) {
             일일 순매수 합계
           </CardDescription>
           <CardTitle
-            className={`text-3xl font-extrabold tracking-tight mt-2 flex items-baseline gap-1.5 ${
-              metrics.netAmount >= 0
-                ? "text-emerald-500 dark:text-emerald-400"
-                : "text-rose-500 dark:text-rose-400"
-            }`}
+            className={`text-3xl font-extrabold tracking-tight mt-2 flex items-baseline gap-1.5 ${metrics.netAmount >= 0
+              ? "text-emerald-500 dark:text-emerald-400"
+              : "text-rose-500 dark:text-rose-400"
+              }`}
           >
             {formatAmount(metrics.netAmount)}
           </CardTitle>

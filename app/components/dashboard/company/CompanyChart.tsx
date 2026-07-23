@@ -106,11 +106,10 @@ export function CompanyChart({ chronologicalData }: CompanyChartProps) {
                         <div className="flex justify-between items-center w-full">
                           <span className="text-muted-foreground">순매수액:</span>
                           <span
-                            className={`font-bold font-mono ${
-                              item.payload.amount >= 0
-                                ? "text-emerald-500 dark:text-emerald-400"
-                                : "text-rose-500 dark:text-rose-400"
-                            }`}
+                            className={`font-bold font-mono ${item.payload.amount >= 0
+                              ? "text-emerald-500 dark:text-emerald-400"
+                              : "text-rose-500 dark:text-rose-400"
+                              }`}
                           >
                             {formatAmount(item.payload.amount)}
                           </span>
@@ -118,11 +117,10 @@ export function CompanyChart({ chronologicalData }: CompanyChartProps) {
                         <div className="flex justify-between items-center w-full">
                           <span className="text-muted-foreground">순매수량:</span>
                           <span
-                            className={`font-medium font-mono ${
-                              Number(value) >= 0
-                                ? "text-emerald-500 dark:text-emerald-400"
-                                : "text-rose-500 dark:text-rose-400"
-                            }`}
+                            className={`font-medium font-mono ${Number(value) >= 0
+                              ? "text-emerald-500 dark:text-emerald-400"
+                              : "text-rose-500 dark:text-rose-400"
+                              }`}
                           >
                             {formatQuantity(Number(value))}
                           </span>
