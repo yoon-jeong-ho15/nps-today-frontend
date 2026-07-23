@@ -1,5 +1,5 @@
 import { supabase } from "~/lib/supabase";
-import { COMPANY_LIST_TABLE } from "../../constants";
+import { COMPANY_LIST_TABLE } from "../constants";
 import type { Company } from "~/types/domain";
 
 export async function fetchCompanyList(): Promise<Company[]> {

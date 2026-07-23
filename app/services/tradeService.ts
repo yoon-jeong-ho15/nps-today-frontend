@@ -1,5 +1,5 @@
 import { supabase } from "~/lib/supabase";
-import { FUND_NET_BUY_TABLE } from "../../constants";
+import { FUND_NET_BUY_TABLE } from "../constants";
 import type { NetBuyRecord } from "~/types/domain";
 
 export async function fetchCompanyNetBuyHistory(
@@ -41,4 +41,19 @@ export async function fetchAvailableTradingDates(): Promise<string[]> {
   }
 
   return data ? data.map((item: { date: string }) => item.date) : [];
+}
+
+export async function fetchRecordsByDates(dates: string[]): Promise<NetBuyRecord[]> {
+  if (!dates || dates.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from(FUND_NET_BUY_TABLE)
+    .select("date, company_id, quantity, amount")
+    .in("date", dates);
+
+  if (error) {
+    throw new Error(`Failed to load transaction records for selected dates: ${error.message}`);
+  }
+
+  return data || [];
 }
