@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { DayMetricsGrid } from "./day/DayMetricsGrid";
+import { DayTopTrades } from "./day/DayTopTrades";
 import { DayRecordsTable } from "./day/DayRecordsTable";
 
 import type { Company, NetBuyRecord } from "~/types/domain";
@@ -60,6 +61,19 @@ export default function DayDashboard({
     };
   }, [selectedRecords]);
 
+  const displayDateStr = useMemo(() => {
+    if (!selectedDate || selectedDate.length !== 8) return selectedDate;
+    const year = selectedDate.substring(0, 4);
+    const month = selectedDate.substring(4, 6);
+    const day = selectedDate.substring(6, 8);
+    
+    const dateObj = new Date(`${year}-${month}-${day}`);
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayName = days[dateObj.getDay()];
+
+    return `${year}년 ${parseInt(month, 10)}월 ${parseInt(day, 10)}일 (${dayName}요일)`;
+  }, [selectedDate]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
       <div className="relative">
@@ -80,7 +94,10 @@ export default function DayDashboard({
           }`}
         >
           {/* Key Metrics Cards */}
-          <DayMetricsGrid metrics={metrics} />
+          <DayMetricsGrid metrics={metrics} displayDateStr={displayDateStr} />
+
+          {/* Top 10 Trades */}
+          <DayTopTrades selectedRecords={selectedRecords} />
 
           {/* Interactive Full Table Section */}
           <DayRecordsTable selectedRecords={selectedRecords} />

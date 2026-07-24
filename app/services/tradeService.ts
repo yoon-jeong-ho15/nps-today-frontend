@@ -57,3 +57,45 @@ export async function fetchRecordsByDates(dates: string[]): Promise<NetBuyRecord
 
   return data || [];
 }
+
+export async function fetchDailyTotalAmounts(): Promise<Record<string, number>> {
+  const totals: Record<string, number> = {};
+  
+  const { count, error: countError } = await supabase
+    .from(FUND_NET_BUY_TABLE)
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    throw new Error(`Failed to count records: ${countError.message}`);
+  }
+
+  const totalCount = count || 0;
+  const limit = 1000;
+  const promises = [];
+
+  for (let offset = 0; offset < totalCount; offset += limit) {
+    promises.push(
+      supabase
+        .from(FUND_NET_BUY_TABLE)
+        .select('date, amount')
+        .range(offset, offset + limit - 1)
+    );
+  }
+
+  const results = await Promise.all(promises);
+
+  results.forEach(({ data, error }) => {
+    if (error) {
+      console.error("Error fetching chunk:", error);
+      return;
+    }
+    if (data) {
+      data.forEach(row => {
+        if (!totals[row.date]) totals[row.date] = 0;
+        totals[row.date] += row.amount;
+      });
+    }
+  });
+
+  return totals;
+}

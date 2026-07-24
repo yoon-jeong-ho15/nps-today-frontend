@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
-import { fetchAvailableTradingDates } from "~/services/tradeService";
+import { fetchAvailableTradingDates, fetchDailyTotalAmounts } from "~/services/tradeService";
 
 export function useDateListData() {
   const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -11,8 +12,12 @@ export function useDateListData() {
       try {
         setLoading(true);
         setError(null);
-        const dates = await fetchAvailableTradingDates();
+        const [dates, totals] = await Promise.all([
+          fetchAvailableTradingDates(),
+          fetchDailyTotalAmounts()
+        ]);
         setAvailableDates(dates);
+        setDailyTotals(totals);
       } catch (err: any) {
         console.error("Error loading dates:", err);
         setError(err.message || "Failed to load available dates.");
@@ -48,6 +53,7 @@ export function useDateListData() {
   return {
     availableDates,
     groupedDates,
+    dailyTotals,
     loading,
     error,
   };

@@ -1,9 +1,10 @@
 import type { Route } from "./+types/date-list";
 import { Link } from "react-router";
-import { formatDateDisplay, formatMonthName } from "~/lib/format";
+import { useMemo } from "react";
+import { formatDateDisplay, formatMonthName, formatAmount } from "~/lib/format";
 import { useDateListData } from "~/hooks/useDateListData";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
     { title: "NPS Today - 거래일 목록" },
     {
@@ -15,7 +16,13 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function DateListRoute() {
-  const { availableDates, groupedDates, loading, error } = useDateListData();
+  const { availableDates, groupedDates, dailyTotals, loading, error } = useDateListData();
+
+  const maxAbsAmount = useMemo(() => {
+    const values = Object.values(dailyTotals);
+    if (values.length === 0) return 1; // prevent division by zero
+    return Math.max(...values.map(Math.abs));
+  }, [dailyTotals]);
 
   if (loading) {
     return (
@@ -71,17 +78,53 @@ export default function DateListRoute() {
                         </h3>
 
                         <div className="grid grid-cols-6 md:grid-cols-5 gap-3">
-                          {groupedDates[year][month].map((dateStr) => (
-                            <Link
-                              key={dateStr}
-                              to={`/date/${dateStr}`}
-                              className="group text-xs flex items-center bg-background hover:bg-yellow-500/5 border border-border hover:border-yellow-500/35 rounded-lg p-2 text-foreground font-semibold hover:text-yellow-600 dark:hover:text-yellow-400 shadow-xs hover:shadow-md transition-all duration-100"
-                            >
-                              <span className="whitespace-nowrap">
-                                {formatDateDisplay(dateStr)}
-                              </span>
-                            </Link>
-                          ))}
+                          {groupedDates[year][month]
+                            .sort((a, b) => a.localeCompare(b))
+                            .map((dateStr) => {
+                              const amount = dailyTotals[dateStr];
+                              let colorClasses = "bg-background text-foreground border-border hover:bg-yellow-500/5 hover:border-yellow-500/35 hover:text-yellow-600 dark:hover:text-yellow-400";
+                              let dynamicStyle: React.CSSProperties = {};
+
+                              if (amount !== undefined) {
+                                const ratio = Math.abs(amount) / maxAbsAmount;
+                                // 0.1 (가장 연함) ~ 0.8 (가장 진함)
+                                const opacity = 0.1 + ratio * 0.7;
+
+                                if (amount > 0) {
+                                  // Green
+                                  colorClasses = "text-green-800 dark:text-green-300 border-green-200/50 dark:border-green-800/30 bg-[rgba(34,197,94,var(--cell-opacity))] hover:bg-[rgba(34,197,94,calc(var(--cell-opacity)+0.15))]";
+                                } else {
+                                  // Red
+                                  colorClasses = "text-red-800 dark:text-red-300 border-red-200/50 dark:border-red-800/30 bg-[rgba(239,68,68,var(--cell-opacity))] hover:bg-[rgba(239,68,68,calc(var(--cell-opacity)+0.15))]";
+                                }
+
+                                dynamicStyle = {
+                                  "--cell-opacity": opacity,
+                                } as React.CSSProperties;
+                              }
+                              
+                              return (
+                                <Link
+                                  key={dateStr}
+                                  to={`/date/${dateStr}`}
+                                  className={`group relative text-xs flex items-center justify-center border rounded-lg p-2 font-semibold shadow-xs hover:shadow-md transition-all duration-100 ${colorClasses}`}
+                                  style={dynamicStyle}
+                                >
+                                  <span className="whitespace-nowrap">
+                                    {formatDateDisplay(dateStr)}
+                                  </span>
+                                  
+                                  {amount !== undefined && (
+                                    <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs rounded-xl bg-popover/95 backdrop-blur-sm border border-border shadow-lg p-2.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50">
+                                      <p className="text-[10px] font-medium text-muted-foreground mb-1 text-center">해당일 총 순매수액</p>
+                                      <p className={`text-sm font-bold text-center ${amount > 0 ? "text-green-600 dark:text-green-400" : amount < 0 ? "text-red-600 dark:text-red-400" : "text-foreground"}`}>
+                                        {formatAmount(amount)}
+                                      </p>
+                                    </div>
+                                  )}
+                                </Link>
+                              );
+                            })}
                         </div>
                       </div>
                     ))}

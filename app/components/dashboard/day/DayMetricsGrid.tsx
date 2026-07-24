@@ -1,4 +1,4 @@
-import { DollarSign, ArrowUpDown } from "lucide-react";
+import { DollarSign, ArrowUpDown, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../ui/card";
 import { formatAmount } from "~/lib/format";
 
@@ -6,11 +6,31 @@ import type { DayDashboardMetrics } from "~/types/domain";
 
 interface DayMetricsGridProps {
   metrics: DayDashboardMetrics;
+  displayDateStr?: string;
 }
 
-export function DayMetricsGrid({ metrics }: DayMetricsGridProps) {
+export function DayMetricsGrid({ metrics, displayDateStr }: DayMetricsGridProps) {
   return (
     <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Date Card */}
+      {displayDateStr && (
+        <Card className="bg-card border-border shadow-lg relative overflow-hidden group hover:border-primary/50 transition-all duration-300 rounded-2xl">
+          <CardHeader className="pb-2">
+            <CardDescription className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+              조회 일자
+            </CardDescription>
+            <CardTitle className="text-2xl lg:text-3xl font-extrabold tracking-tight mt-2 text-foreground">
+              {displayDateStr}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Calendar className="w-24 h-24 text-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Net Total Card */}
       <Card className="bg-card border-border shadow-lg relative overflow-hidden group hover:border-primary/50 transition-all duration-300 rounded-2xl">
         <CardHeader className="pb-2">
