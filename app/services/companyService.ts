@@ -5,7 +5,7 @@ import type { Company } from "~/types/domain";
 export async function fetchCompanyList(): Promise<Company[]> {
   const { data, error } = await supabase
     .from(COMPANY_LIST_TABLE)
-    .select("id, name");
+    .select("*");
 
   if (error) {
     throw new Error(`Failed to load company list: ${error.message}`);
@@ -17,7 +17,7 @@ export async function fetchCompanyList(): Promise<Company[]> {
 export async function fetchCompanyInfo(companyId: string): Promise<Company | null> {
   const { data, error } = await supabase
     .from(COMPANY_LIST_TABLE)
-    .select("id, name")
+    .select("*")
     .eq("id", companyId)
     .maybeSingle();
 

@@ -2,6 +2,7 @@ import { TrendingUp, TrendingDown, Building2, ChevronRight } from "lucide-react"
 import { Link } from "react-router";
 import type { VolumeTrendCompany } from "~/hooks/useVolumeTrendData";
 import { formatAmount } from "~/lib/format";
+import { CompanyCard } from "~/components/dashboard/company/CompanyCard";
 
 interface VolumeTrendGridProps {
   topBuyers: VolumeTrendCompany[];
@@ -30,9 +31,8 @@ export function VolumeTrendGrid({
       )}
 
       <div
-        className={`grid grid-cols-1 lg:grid-cols-2 gap-8 transition-all duration-300 ${
-          loadingVolume ? "opacity-25 pointer-events-none blur-[1px]" : "opacity-100"
-        }`}
+        className={`grid grid-cols-1 lg:grid-cols-2 gap-8 transition-all duration-300 ${loadingVolume ? "opacity-25 pointer-events-none blur-[1px]" : "opacity-100"
+          }`}
       >
         {/* Top Volume Buyers */}
         <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
@@ -55,26 +55,19 @@ export function VolumeTrendGrid({
             ) : (
               <div className="grid grid-cols-1 gap-3">
                 {topBuyers.map((company) => (
-                  <Link
+                  <CompanyCard
                     key={company.id}
-                    to={`/company/${company.id}`}
-                    className="group flex items-center justify-between bg-card border border-border hover:border-emerald-500/35 rounded-xl px-4 py-3 hover:shadow-sm transition-all duration-200 cursor-pointer"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <span className="font-semibold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                        {company.name}
-                      </span>
-                      <span className="text-xs font-mono text-muted-foreground">
-                        {company.id}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold px-2.5 py-1 text-emerald-600 dark:text-emerald-400">
-                        +{formatAmount(company.totalAmount)}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-emerald-500 transition-all" />
-                    </div>
-                  </Link>
+                    company={company}
+                    hoverColor="emerald"
+                    rightAction={
+                      <>
+                        <span className="text-sm font-semibold px-2.5 py-1 text-emerald-600 dark:text-emerald-400 shrink-0">
+                          +{formatAmount(company.totalAmount)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-emerald-500 transition-all shrink-0" />
+                      </>
+                    }
+                  />
                 ))}
               </div>
             )}
@@ -102,26 +95,19 @@ export function VolumeTrendGrid({
             ) : (
               <div className="grid grid-cols-1 gap-3">
                 {topSellers.map((company) => (
-                  <Link
+                  <CompanyCard
                     key={company.id}
-                    to={`/company/${company.id}`}
-                    className="group flex items-center justify-between bg-card border border-border hover:border-rose-500/35 rounded-xl px-4 py-3 hover:shadow-sm transition-all duration-200 cursor-pointer"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <span className="font-semibold text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
-                        {company.name}
-                      </span>
-                      <span className="text-xs font-mono text-muted-foreground">
-                        {company.id}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold px-2.5 py-1 text-rose-600 dark:text-rose-400">
-                        {formatAmount(company.totalAmount)}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-rose-500 transition-all" />
-                    </div>
-                  </Link>
+                    company={company}
+                    hoverColor="rose"
+                    rightAction={
+                      <>
+                        <span className="text-sm font-semibold px-2.5 py-1 text-rose-600 dark:text-rose-400 shrink-0">
+                          {formatAmount(company.totalAmount)}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-rose-500 transition-all shrink-0" />
+                      </>
+                    }
+                  />
                 ))}
               </div>
             )}
