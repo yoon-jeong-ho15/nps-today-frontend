@@ -1,9 +1,10 @@
 import type { Route } from "./+types/company-list";
 import { Link } from "react-router";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useCompanyListData } from "~/hooks/useCompanyListData";
+import { CompanyCard } from "~/components/dashboard/company/CompanyCard";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
     { title: "NPS Today - 기업 목록" },
     { name: "description", content: "국민연금공단(NPS) 거래 데이터를 확인할 수 있는 코스피 상장 기업 목록입니다." },
@@ -33,17 +34,31 @@ export default function CompanyListRoute() {
   return (
     <div className="min-h-screen bg-linear-to-b from-background to-muted/20 font-sans antialiased flex flex-col transition-colors duration-300">
       {/* Main Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-10 flex flex-col gap-6">
-        {/* Search Bar */}
-        <div className="relative w-full max-w-md mx-auto">
-          <input
-            type="text"
-            placeholder="기업명 또는 종목코드 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-card border border-border rounded-2xl py-3 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 shadow-xs transition-all duration-200"
-          />
-          <Search className="w-5 h-5 text-muted-foreground absolute left-4 top-3.5" />
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
+        {/* Search Bar & Stats Header */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs">
+          <div className="relative w-full sm:max-w-md">
+            <input
+              type="text"
+              placeholder="기업명 또는 종목코드 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-background border border-border rounded-xl py-2.5 pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all duration-200"
+            />
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3" />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="검색어 초기화"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <div className="text-xs font-medium text-muted-foreground self-end sm:self-center">
+            총 <span className="text-emerald-600 dark:text-emerald-400 font-bold">{filteredCompanies.length}</span>개 종목
+          </div>
         </div>
 
         {error ? (
@@ -58,28 +73,14 @@ export default function CompanyListRoute() {
             </button>
           </div>
         ) : filteredCompanies.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-3xl mt-6">
+          <div className="text-center py-16 text-muted-foreground bg-card border border-border rounded-2xl mt-2">
             검색 결과가 없습니다.
           </div>
         ) : (
-          <section className="bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-sm transition-colors mt-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <section className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs transition-colors">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3">
               {filteredCompanies.map((c) => (
-                <Link
-                  key={c.id}
-                  to={`/company/${c.id}`}
-                  className="group flex items-center justify-between bg-background hover:bg-emerald-500/5 border border-border hover:border-emerald-500/35 rounded-2xl px-5 py-4 hover:shadow-md transition-all duration-200 cursor-pointer"
-                >
-                  <div className="flex flex-col gap-1">
-                    <span className="font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                      {c.name}
-                    </span>
-                    <span className="text-xs font-mono text-muted-foreground">
-                      {c.id}
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-emerald-500 transition-all" />
-                </Link>
+                <CompanyCard key={c.id} company={c} layout="dense" hoverColor="emerald" />
               ))}
             </div>
           </section>

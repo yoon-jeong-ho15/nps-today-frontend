@@ -1,6 +1,8 @@
 export interface Company {
   id: string;
   name: string;
+  logo_url?: string;
+  logoUrl?: string;
 }
 
 export interface NetBuyRecord {
