@@ -1,5 +1,7 @@
 import type { Route } from "./+types/trend";
-import TrendDashboard from "~/components/dashboard/trend/trend";
+import { TrendingUp } from "lucide-react";
+import { StreakTrendGrid } from "~/components/dashboard/trend/StreakTrendGrid";
+import { VolumeTrendGrid } from "~/components/dashboard/trend/VolumeTrendGrid";
 import { useTrendData } from "~/hooks/useTrendData";
 import { useVolumeTrendData } from "~/hooks/useVolumeTrendData";
 
@@ -36,16 +38,36 @@ export default function TrendRoute() {
   return (
     <div className="min-h-screen bg-linear-to-b from-background to-muted/20 font-sans antialiased flex flex-col transition-colors duration-300">
       <main className="flex-1 w-full">
-        <TrendDashboard
-          buyers={buyers}
-          sellers={sellers}
-          loading={loading}
-          days={days}
-          topBuyers={topBuyers}
-          topSellers={topSellers}
-          loadingVolume={loadingVolume}
-          volumeDays={volumeDays}
-        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                <TrendingUp className="w-8 h-8 text-emerald-500" />
+                시장 트렌드
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                최근 {days}거래일 연속 순매수/순매도 종목을 확인하세요.
+              </p>
+            </div>
+          </div>
+
+          {/* Continuous Streak Trend Grid */}
+          <StreakTrendGrid
+            buyers={buyers}
+            sellers={sellers}
+            loading={loading}
+            days={days}
+          />
+
+          {/* Volume Trend Grid */}
+          <VolumeTrendGrid
+            topBuyers={topBuyers}
+            topSellers={topSellers}
+            loadingVolume={loadingVolume}
+            volumeDays={volumeDays}
+          />
+        </div>
       </main>
     </div>
   );
