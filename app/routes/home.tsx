@@ -1,38 +1,53 @@
 import type { Route } from "./+types/home";
-import { Link } from "react-router";
-import { Calendar, Building2, TrendingUp, ChevronRight } from "lucide-react";
-import { ThemeToggle } from "../components/theme-toggle";
+import { StockChartBackground } from "~/components/ui/stock-chart-background";
+import {
+  LandingHero,
+  LandingMetrics,
+  LandingMarketPulse,
+  LandingBentoFeatures,
+  LandingWhyNps,
+  LandingPopularStocks,
+  LandingCtaBanner,
+} from "~/components/landing";
 
-export function meta({}: Route.MetaArgs) {
+export function meta({ }: Route.MetaArgs) {
   return [
-    { title: "NPS today - 국민연금 코스피 거래 동향" },
+    { title: "NPS Today - 국민연금 코스피 거래 동향 및 수급 인텔리전스" },
     {
       name: "description",
       content:
-        "국민연금공단(NPS)의 코스피 주식 거래 동향 및 기업별 매매 분석 대시보드",
+        "대한민국 최대 기관투자자 국민연금공단(NPS)의 코스피 실시간 순매수/순매도 동향, 연속 매집 트렌드, 종목별 누적 거래 분석 대시보드",
     },
   ];
 }
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-linear-to-b from-background to-muted/30 font-sans antialiased flex flex-col transition-colors duration-300">
-      <main className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto px-6 py-12 text-center">
-        <div className="animate-fade-in flex flex-col items-center">
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-foreground tracking-tight leading-none mb-6">
-            오늘의
-            <span className="bg-linear-to-r from-yellow-500 to-amber-500 bg-clip-text text-transparent">
-              국민연금
-            </span>
-            동향
-          </h1>
-          <p className="text-muted-foreground text-base sm:text-xl max-w-2xl mb-12 leading-relaxed">
-            국민연금공단(NPS)의 코스피 시장 일별 매수/매도 규모를 파악하고,
-            <br className="hidden sm:inline" />
-            개별 기업에 대한 국민연금의 실시간 누적 매매 추이를 한눈에 분석해
-            보세요.
-          </p>
-        </div>
+    <div className="relative min-h-screen bg-background font-sans antialiased overflow-hidden transition-colors duration-300">
+      {/* Background Decorator: Glowing Ambient Orbs & Financial Grid */}
+      <StockChartBackground />
+
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col gap-20 sm:gap-28">
+        {/* 1. Hero with search autocomplete & quick actions */}
+        <LandingHero />
+
+        {/* 2. Key scale & reliability metrics */}
+        <LandingMetrics />
+
+        {/* 3. Live 5-day continuous streak buyers & sellers */}
+        <LandingMarketPulse />
+
+        {/* 4. 3 Core Feature Bento Cards */}
+        <LandingBentoFeatures />
+
+        {/* 5. Value Proposition: Why Track NPS */}
+        <LandingWhyNps />
+
+        {/* 6. Popular stocks quick directory */}
+        <LandingPopularStocks />
+
+        {/* 7. Bottom high-converting CTA Banner */}
+        <LandingCtaBanner />
       </main>
     </div>
   );
