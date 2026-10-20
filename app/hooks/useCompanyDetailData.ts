@@ -34,6 +34,8 @@ export function useCompanyDetailData(companyId: string | undefined) {
       return;
     }
 
+    const currentId = companyId;
+
     async function loadCompanyData() {
       try {
         if (historicalData.length === 0) {
@@ -44,8 +46,8 @@ export function useCompanyDetailData(companyId: string | undefined) {
         setError(null);
 
         const [companyInfo, records] = await Promise.all([
-          fetchCompanyInfo(companyId),
-          fetchCompanyNetBuyHistory(companyId, rangeDays),
+          fetchCompanyInfo(currentId),
+          fetchCompanyNetBuyHistory(currentId, rangeDays),
         ]);
 
         if (companyInfo) {

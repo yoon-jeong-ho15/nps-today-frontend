@@ -43,19 +43,54 @@ export async function fetchAvailableTradingDates(): Promise<string[]> {
   return data ? data.map((item: { date: string }) => item.date) : [];
 }
 
+export interface VolumeTrendRecord {
+  id: string;
+  name: string;
+  total_amount: number;
+}
+
+export async function fetchVolumeTrend(days: number = 30): Promise<VolumeTrendRecord[]> {
+  const { data, error } = await supabase.rpc("get_volume_trend", {
+    days_count: days,
+  });
+
+  if (error) {
+    throw new Error(`Failed to load volume trend: ${error.message}`);
+  }
+
+  return (data || []).map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    total_amount: Number(item.total_amount),
+  }));
+}
+
 export async function fetchRecordsByDates(dates: string[]): Promise<NetBuyRecord[]> {
   if (!dates || dates.length === 0) return [];
 
-  const { data, error } = await supabase
-    .from(FUND_NET_BUY_TABLE)
-    .select("date, company_id, quantity, amount")
-    .in("date", dates);
+  const allRecords: NetBuyRecord[] = [];
+  const pageSize = 1000;
+  let from = 0;
 
-  if (error) {
-    throw new Error(`Failed to load transaction records for selected dates: ${error.message}`);
+  while (true) {
+    const { data, error } = await supabase
+      .from(FUND_NET_BUY_TABLE)
+      .select("date, company_id, quantity, amount")
+      .in("date", dates)
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      throw new Error(`Failed to load transaction records for selected dates: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) break;
+
+    allRecords.push(...data);
+    if (data.length < pageSize) break;
+    from += pageSize;
   }
 
-  return data || [];
+  return allRecords;
 }
 
 export async function fetchDailyTotalAmounts(): Promise<Record<string, number>> {

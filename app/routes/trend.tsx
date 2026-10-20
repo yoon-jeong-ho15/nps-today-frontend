@@ -47,7 +47,7 @@ export default function TrendRoute() {
                 시장 트렌드
               </h1>
               <p className="text-muted-foreground mt-1">
-                최근 {days}거래일 연속 순매수/순매도 종목을 확인하세요.
+                최근 {days}거래일 연속 순매수/순매도 및 {volumeDays}거래일 누적 거래 종목을 확인하세요.
               </p>
             </div>
           </div>
