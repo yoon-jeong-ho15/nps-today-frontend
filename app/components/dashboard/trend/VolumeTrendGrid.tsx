@@ -39,10 +39,10 @@ export function VolumeTrendGrid({
           <div className="p-6 border-b border-border bg-emerald-500/5">
             <h2 className="text-lg font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
-              최근 {volumeDays}일 누적 순매수 상위
+              최근 {volumeDays}거래일 누적 순매수 상위
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              연기금이 최근 {volumeDays}일간 가장 많이 매수한 종목입니다.
+              국민연금이 최근 {volumeDays}거래일간 가장 많이 순매수한 종목입니다.
             </p>
           </div>
 
@@ -62,7 +62,7 @@ export function VolumeTrendGrid({
                     rightAction={
                       <>
                         <span className="text-sm font-semibold px-2.5 py-1 text-emerald-600 dark:text-emerald-400 shrink-0">
-                          +{formatAmount(company.totalAmount)}
+                          {formatAmount(company.totalAmount)}
                         </span>
                         <ChevronRight className="w-4 h-4 text-muted-foreground opacity-50 group-hover:opacity-100 group-hover:text-emerald-500 transition-all shrink-0" />
                       </>
@@ -79,10 +79,10 @@ export function VolumeTrendGrid({
           <div className="p-6 border-b border-border bg-rose-500/5">
             <h2 className="text-lg font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2">
               <TrendingDown className="w-5 h-5" />
-              최근 {volumeDays}일 누적 순매도 상위
+              최근 {volumeDays}거래일 누적 순매도 상위
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              연기금이 최근 {volumeDays}일간 가장 많이 매도한 종목입니다.
+              국민연금이 최근 {volumeDays}거래일간 가장 많이 순매도한 종목입니다.
             </p>
           </div>
 
