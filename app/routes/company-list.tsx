@@ -1,91 +1,167 @@
+import { useState } from "react";
+import {
+  Search,
+  Star,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { Link, useSearchParams } from "react-router";
 import type { Route } from "./+types/company-list";
-import { Link } from "react-router";
-import { Search, X } from "lucide-react";
 import { useCompanyListData } from "~/hooks/useCompanyListData";
-import { CompanyCard } from "~/components/dashboard/company/CompanyCard";
+import { useWatchlist } from "~/hooks/useWatchlist";
+import { CompanyLogo } from "~/components/dashboard/company/CompanyLogo";
+import {
+  EmptyState,
+  ErrorState,
+  FavoriteButton,
+  LoadingState,
+  PageHeading,
+  SegmentedControl,
+} from "~/components/dashboard/shared";
 
-export function meta({ }: Route.MetaArgs) {
-  return [
-    { title: "NPS Today - 기업 목록" },
-    { name: "description", content: "국민연금공단(NPS) 거래 데이터를 확인할 수 있는 코스피 상장 기업 목록입니다." },
-  ];
+export function meta({}: Route.MetaArgs) {
+  return [{ title: "종목 탐색 · NPS today" }];
 }
-
 export default function CompanyListRoute() {
-  const {
-    filteredCompanies,
-    searchTerm,
-    setSearchTerm,
-    loading,
-    error,
-  } = useCompanyListData();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
-          <p className="text-muted-foreground text-sm font-medium animate-pulse">기업 목록 불러오는 중...</p>
-        </div>
-      </div>
-    );
-  }
-
+  const { filteredCompanies, searchTerm, setSearchTerm, loading, error } =
+    useCompanyListData();
+  const { ids, toggle } = useWatchlist();
+  const [params, setParams] = useSearchParams();
+  const view = params.get("view") === "watchlist" ? "watchlist" : "all";
+  const [page, setPage] = useState(0);
+  const companies =
+    view === "watchlist"
+      ? filteredCompanies.filter((company) => ids.includes(company.id))
+      : filteredCompanies;
+  const pages = Math.max(1, Math.ceil(companies.length / 36));
+  const current = Math.min(page, pages - 1);
   return (
-    <div className="min-h-screen bg-linear-to-b from-background to-muted/20 font-sans antialiased flex flex-col transition-colors duration-300">
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-6">
-        {/* Search Bar & Stats Header */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs">
-          <div className="relative w-full sm:max-w-md">
-            <input
-              type="text"
-              placeholder="기업명 또는 종목코드 검색..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-background border border-border rounded-xl py-2.5 pl-10 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 transition-all duration-200"
+    <main className="dashboard-page">
+      <PageHeading
+        eyebrow="EXPLORE COMPANIES"
+        title="어떤 종목이 궁금하세요?"
+        description="기업명이나 종목코드로 검색하고, 관심 종목을 모아보세요."
+        actions={
+          <span className="badge">
+            <Star size={12} /> 관심 종목 {ids.length}개
+          </span>
+        }
+      />
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} />
+      ) : (
+        <>
+          <div className="explore-toolbar">
+            <SegmentedControl
+              value={view}
+              onChange={(value) => {
+                setParams(value === "watchlist" ? { view: "watchlist" } : {});
+                setPage(0);
+              }}
+              options={[
+                { value: "all", label: "전체 종목" },
+                { value: "watchlist", label: "내 관심 종목" },
+              ]}
+              label="종목 목록"
             />
-            <Search className="w-4 h-4 text-muted-foreground absolute left-3.5 top-3" />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="검색어 초기화"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
+            <label className="search-field">
+              <Search size={15} />
+              <input
+                aria-label="기업명 또는 종목코드 검색"
+                placeholder="기업명 또는 종목코드 검색"
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setPage(0);
+                }}
+              />
+            </label>
           </div>
-          <div className="text-xs font-medium text-muted-foreground self-end sm:self-center">
-            총 <span className="text-emerald-600 dark:text-emerald-400 font-bold">{filteredCompanies.length}</span>개 종목
+          <div className="results-label">
+            총 <strong>{companies.length}</strong>개 종목{" "}
+            <span>기업명 가나다순</span>
           </div>
-        </div>
-
-        {error ? (
-          <div className="max-w-md mx-auto text-center bg-card border border-border p-6 rounded-2xl shadow-md mt-6">
-            <h3 className="text-lg font-bold text-foreground mb-2">오류 발생</h3>
-            <p className="text-muted-foreground text-sm mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg text-sm font-semibold transition-colors"
-            >
-              다시 시도
-            </button>
-          </div>
-        ) : filteredCompanies.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground bg-card border border-border rounded-2xl mt-2">
-            검색 결과가 없습니다.
-          </div>
-        ) : (
-          <section className="bg-card border border-border rounded-2xl p-4 sm:p-6 shadow-xs transition-colors">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 sm:gap-3">
-              {filteredCompanies.map((c) => (
-                <CompanyCard key={c.id} company={c} layout="dense" hoverColor="emerald" />
-              ))}
+          {!companies.length ? (
+            <div className="panel">
+              <EmptyState
+                title={
+                  view === "watchlist" && !searchTerm
+                    ? "아직 관심 종목이 없어요"
+                    : "검색 결과가 없습니다"
+                }
+                description={
+                  view === "watchlist"
+                    ? "전체 종목에서 별표를 눌러 나만의 관심 목록을 만들어보세요."
+                    : "기업명이나 6자리 종목코드를 확인해주세요."
+                }
+              />
             </div>
-          </section>
-        )}
-      </main>
-    </div>
+          ) : (
+            <div className="company-grid">
+              {companies
+                .slice(current * 36, (current + 1) * 36)
+                .map((company) => (
+                  <div className="company-tile" key={company.id}>
+                    <Link to={`/company/${company.id}`}>
+                      <CompanyLogo company={company} />
+                      <span className="stock-row-title">
+                        <strong>{company.name}</strong>
+                        <small>
+                          {company.id} <span className="muted">· KOSPI</span>
+                        </small>
+                      </span>
+                    </Link>
+                    <FavoriteButton
+                      name={company.name}
+                      selected={ids.includes(company.id)}
+                      onClick={() => toggle(company.id)}
+                    />
+                  </div>
+                ))}
+            </div>
+          )}
+          {pages > 1 && (
+            <div className="explore-pagination">
+              <button
+                className="button button-secondary"
+                disabled={!current}
+                onClick={() => {
+                  setPage(current - 1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                <ChevronLeft size={14} /> 이전
+              </button>
+              <span>
+                {current + 1} / {pages}
+              </span>
+              <button
+                className="button button-secondary"
+                disabled={current + 1 >= pages}
+                onClick={() => {
+                  setPage(current + 1);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              >
+                다음 <ChevronRight size={14} />
+              </button>
+            </div>
+          )}
+          <div className="insight-banner">
+            <ArrowUpRight size={18} />
+            <p>
+              여러 종목의 매수·매도 흐름을 함께 보고 싶다면{" "}
+              <strong>수급 트렌드</strong>를 확인해보세요.
+            </p>
+            <Link to="/trend">
+              트렌드 보기 <ArrowUpRight size={13} />
+            </Link>
+          </div>
+        </>
+      )}
+    </main>
   );
 }

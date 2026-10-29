@@ -1,86 +1,36 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { fetchCompanyList, fetchCompanyInfo } from "~/services/companyService";
 import { fetchCompanyNetBuyHistory } from "~/services/tradeService";
 import type { Company, NetBuyRecord } from "~/types/domain";
+import { useAsyncData } from "./useAsyncData";
+
+const EMPTY_COMPANIES: Company[] = [];
+const EMPTY_DETAIL = { companyName: "", historicalData: [] as NetBuyRecord[] };
 
 export function useCompanyDetailData(companyId: string | undefined) {
-  const [allCompanies, setAllCompanies] = useState<Company[]>([]);
-  const [historicalData, setHistoricalData] = useState<NetBuyRecord[]>([]);
-  const [companyName, setCompanyName] = useState<string>("");
-  const [rangeDays, setRangeDays] = useState<number>(30);
-
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const [dataLoading, setDataLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // 1. Initial load: company list
-  useEffect(() => {
-    async function loadCompanies() {
-      try {
-        const companies = await fetchCompanyList();
-        setAllCompanies(companies);
-      } catch (err: any) {
-        console.error("Error loading company list:", err);
-      }
-    }
-    loadCompanies();
-  }, []);
-
-  // 2. Load company info and history when companyId or rangeDays changes
-  useEffect(() => {
-    if (!companyId) {
-      setError("No company ID provided. Please select a company from the list page.");
-      setInitialLoading(false);
-      return;
-    }
-
-    const currentId = companyId;
-
-    async function loadCompanyData() {
-      try {
-        if (historicalData.length === 0) {
-          setInitialLoading(true);
-        } else {
-          setDataLoading(true);
-        }
-        setError(null);
-
-        const [companyInfo, records] = await Promise.all([
-          fetchCompanyInfo(currentId),
-          fetchCompanyNetBuyHistory(currentId, rangeDays),
-        ]);
-
-        if (companyInfo) {
-          setCompanyName(companyInfo.name);
-        } else {
-          setCompanyName("Unknown Company");
-        }
-
-        setHistoricalData(records);
-      } catch (err: any) {
-        console.error("Error loading company dashboard data:", err);
-        setError(err.message || "Failed to load company transactions dashboard");
-      } finally {
-        setInitialLoading(false);
-        setDataLoading(false);
-      }
-    }
-
-    loadCompanyData();
-  }, [companyId, rangeDays]);
-
-  const handleRangeChange = (days: number) => {
-    setRangeDays(days);
-  };
+  const [rangeDays, setRangeDays] = useState(30);
+  const companies = useAsyncData(fetchCompanyList, EMPTY_COMPANIES);
+  const loadDetail = useCallback(
+    async (signal: AbortSignal) => {
+      if (!companyId) throw new Error("기업을 선택해주세요.");
+      const [company, historicalData] = await Promise.all([
+        fetchCompanyInfo(companyId, signal),
+        fetchCompanyNetBuyHistory(companyId, rangeDays, signal),
+      ]);
+      if (!company) throw new Error("기업 정보를 찾을 수 없습니다.");
+      return { companyName: company.name, historicalData };
+    },
+    [companyId, rangeDays],
+  );
+  const detail = useAsyncData(loadDetail, EMPTY_DETAIL);
 
   return {
-    allCompanies,
-    historicalData,
-    companyName,
+    allCompanies: companies.data,
+    ...detail.data,
     rangeDays,
-    handleRangeChange,
-    initialLoading,
-    dataLoading,
-    error,
+    handleRangeChange: setRangeDays,
+    initialLoading: companies.initialLoading || detail.initialLoading,
+    dataLoading: detail.dataLoading,
+    error: companies.error || detail.error,
   };
 }

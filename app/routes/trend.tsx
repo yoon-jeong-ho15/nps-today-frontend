@@ -1,74 +1,109 @@
+import { useState } from "react";
+import { Flame, Layers, CircleHelp } from "lucide-react";
 import type { Route } from "./+types/trend";
-import { TrendingUp } from "lucide-react";
-import { StreakTrendGrid } from "~/components/dashboard/trend/StreakTrendGrid";
-import { VolumeTrendGrid } from "~/components/dashboard/trend/VolumeTrendGrid";
 import { useTrendData } from "~/hooks/useTrendData";
 import { useVolumeTrendData } from "~/hooks/useVolumeTrendData";
-
-export function meta({ }: Route.MetaArgs) {
-  return [
-    { title: "NPS Today - 시장 트렌드" },
-    { name: "description", content: "국민연금공단의 최근 연속 순매수 및 순매도 종목 트렌드를 확인하세요." },
-  ];
+import { StreakTrendGrid } from "~/components/dashboard/trend/StreakTrendGrid";
+import { VolumeTrendGrid } from "~/components/dashboard/trend/VolumeTrendGrid";
+import {
+  ErrorState,
+  PageHeading,
+  SegmentedControl,
+} from "~/components/dashboard/shared";
+export function meta({}: Route.MetaArgs) {
+  return [{ title: "수급 트렌드 · NPS today" }];
 }
-
 export default function TrendRoute() {
-  const days = 5;
-  const volumeDays = 30;
+  const [tab, setTab] = useState("streak");
+  const [days, setDays] = useState(5);
+  const [volumeDays, setVolumeDays] = useState(30);
   const { buyers, sellers, loading, error } = useTrendData(days);
-  const { topBuyers, topSellers, loadingVolume, errorVolume } = useVolumeTrendData(volumeDays);
-
-  if (error || errorVolume) {
-    return (
-      <div className="min-h-screen bg-linear-to-b from-background to-muted/20 font-sans antialiased flex flex-col pt-12">
-        <div className="max-w-md mx-auto text-center bg-card border border-border p-6 rounded-2xl shadow-md">
-          <h3 className="text-lg font-bold text-foreground mb-2">오류 발생</h3>
-          <p className="text-muted-foreground text-sm mb-4">{error || errorVolume}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg text-sm font-semibold transition-colors"
-          >
-            다시 시도
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  const { topBuyers, topSellers, loadingVolume, errorVolume } =
+    useVolumeTrendData(volumeDays);
   return (
-    <div className="min-h-screen bg-linear-to-b from-background to-muted/20 font-sans antialiased flex flex-col transition-colors duration-300">
-      <main className="flex-1 w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
-                <TrendingUp className="w-8 h-8 text-emerald-500" />
-                시장 트렌드
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                최근 {days}거래일 연속 순매수/순매도 및 {volumeDays}거래일 누적 거래 종목을 확인하세요.
-              </p>
-            </div>
-          </div>
-
-          {/* Continuous Streak Trend Grid */}
+    <main className="dashboard-page">
+      <PageHeading
+        eyebrow="FOLLOW THE FLOW"
+        title="꾸준한 움직임에는 이유가 있죠"
+        description="연속 매매와 누적 금액으로 수급의 방향을 살펴보세요."
+      />
+      <div className="trend-tabs" role="group" aria-label="트렌드 분석 방식">
+        <button
+          aria-pressed={tab === "streak"}
+          onClick={() => setTab("streak")}
+        >
+          <Flame size={17} /> 연속 매매<span>매일 같은 방향으로</span>
+        </button>
+        <button
+          aria-pressed={tab === "volume"}
+          onClick={() => setTab("volume")}
+        >
+          <Layers size={17} /> 누적 수급<span>기간 동안 얼마나</span>
+        </button>
+      </div>
+      <div className="explore-toolbar">
+        <div>
+          <h2 className="section-title">
+            {tab === "streak"
+              ? "꾸준히 사고, 꾸준히 파는 종목"
+              : "큰 자금이 움직인 종목"}
+          </h2>
+          <p className="section-description">
+            {tab === "streak"
+              ? "선택한 거래일마다 순매수·순매도가 이어진 종목입니다."
+              : "기간 내 순매수 금액을 모두 합산해 비교합니다."}
+          </p>
+        </div>
+        {tab === "streak" ? (
+          <SegmentedControl
+            value={days}
+            onChange={setDays}
+            options={[3, 5, 10].map((value) => ({
+              value,
+              label: `${value}거래일`,
+            }))}
+            label="연속 매매 기간"
+          />
+        ) : (
+          <SegmentedControl
+            value={volumeDays}
+            onChange={setVolumeDays}
+            options={[5, 20, 30, 60].map((value) => ({
+              value,
+              label: `${value}거래일`,
+            }))}
+            label="누적 수급 기간"
+          />
+        )}
+      </div>
+      {tab === "streak" ? (
+        error ? (
+          <ErrorState message={error} />
+        ) : (
           <StreakTrendGrid
             buyers={buyers}
             sellers={sellers}
             loading={loading}
             days={days}
           />
-
-          {/* Volume Trend Grid */}
-          <VolumeTrendGrid
-            topBuyers={topBuyers}
-            topSellers={topSellers}
-            loadingVolume={loadingVolume}
-            volumeDays={volumeDays}
-          />
-        </div>
-      </main>
-    </div>
+        )
+      ) : errorVolume ? (
+        <ErrorState message={errorVolume} />
+      ) : (
+        <VolumeTrendGrid
+          topBuyers={topBuyers}
+          topSellers={topSellers}
+          loadingVolume={loadingVolume}
+          volumeDays={volumeDays}
+        />
+      )}
+      <div className="data-note">
+        <CircleHelp size={12} />
+        <span>
+          연속 매매는 해당 거래일 모두에 기록이 있는 종목을 기준으로 합니다.
+          누적 수급은 순매수와 순매도를 상계한 금액입니다.
+        </span>
+      </div>
+    </main>
   );
 }

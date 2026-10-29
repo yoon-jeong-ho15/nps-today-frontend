@@ -16,6 +16,20 @@ export interface RecordWithCompany extends NetBuyRecord {
   company_name: string;
 }
 
+export interface TrendCompany extends Company {
+  streakDays: number;
+}
+
+export interface VolumeTrendCompany extends Company {
+  totalAmount: number;
+}
+
+export interface VolumeTrendRecord {
+  id: string;
+  name: string;
+  total_amount: number;
+}
+
 export interface DayDashboardMetrics {
   totalBuyAmount: number;
   totalSellAmount: number;

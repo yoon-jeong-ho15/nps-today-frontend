@@ -1,59 +1,41 @@
-import { useState, useEffect, useMemo } from "react";
-import { fetchAvailableTradingDates, fetchDailyTotalAmounts } from "~/services/tradeService";
+import { useMemo } from "react";
+import {
+  fetchAvailableTradingDates,
+  fetchDailyTotalAmounts,
+} from "~/services/tradeService";
+import { useAsyncData } from "./useAsyncData";
+
+const EMPTY_DATA = {
+  dates: [] as string[],
+  totals: {} as Record<string, number>,
+};
+
+async function loadDates(signal: AbortSignal) {
+  const [dates, totals] = await Promise.all([
+    fetchAvailableTradingDates(signal),
+    fetchDailyTotalAmounts(signal),
+  ]);
+  return { dates, totals };
+}
 
 export function useDateListData() {
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
-  const [dailyTotals, setDailyTotals] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadDates() {
-      try {
-        setLoading(true);
-        setError(null);
-        const [dates, totals] = await Promise.all([
-          fetchAvailableTradingDates(),
-          fetchDailyTotalAmounts()
-        ]);
-        setAvailableDates(dates);
-        setDailyTotals(totals);
-      } catch (err: any) {
-        console.error("Error loading dates:", err);
-        setError(err.message || "Failed to load available dates.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadDates();
-  }, []);
-
+  const { data, loading, error } = useAsyncData(loadDates, EMPTY_DATA);
   const groupedDates = useMemo(() => {
     const groups: Record<string, Record<string, string[]>> = {};
-
-    availableDates.forEach((dateStr) => {
-      if (dateStr.length === 8) {
-        const year = dateStr.substring(0, 4);
-        const month = dateStr.substring(4, 6);
-
-        if (!groups[year]) {
-          groups[year] = {};
-        }
-        if (!groups[year][month]) {
-          groups[year][month] = [];
-        }
-        groups[year][month].push(dateStr);
-      }
+    data.dates.forEach((date) => {
+      if (!/^\d{8}$/.test(date)) return;
+      const year = date.substring(0, 4);
+      const month = date.substring(4, 6);
+      groups[year] ??= {};
+      groups[year][month] ??= [];
+      groups[year][month].push(date);
     });
-
     return groups;
-  }, [availableDates]);
-
+  }, [data.dates]);
   return {
-    availableDates,
+    availableDates: data.dates,
+    dailyTotals: data.totals,
     groupedDates,
-    dailyTotals,
     loading,
     error,
   };

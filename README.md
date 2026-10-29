@@ -1,87 +1,111 @@
-# Welcome to React Router!
+# NPS Today 프런트엔드
 
-A modern, production-ready template for building full-stack React applications using React Router.
+React Router, React, TypeScript, Supabase를 사용하는 거래 동향 대시보드입니다.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## 대시보드 사용
 
-## Features
+- 홈에서 최근 거래일의 요약, 최근 20거래일 차트, 주요 수급 종목을 확인합니다.
+- 상단 검색이나 `⌘/Ctrl + K`, `/`로 기업을 검색합니다.
+- 별표를 누르면 현재 브라우저에 관심 종목이 저장됩니다.
+- 종목·일별 테이블에서 필터, 정렬, 페이지 이동, CSV 다운로드를 사용할 수 있습니다.
+- 거래 캘린더와 종목 상세의 날짜 링크를 통해 일별 분석으로 이동합니다.
+- 모바일 하단 메뉴와 라이트·다크 모드를 지원합니다.
+- 대시보드의 네 가지 인사이트에서 최근 5·20거래일을 선택해 하락 중 연속 순매수, 거래대금 대비 수급, 업종별 변화, 패턴 이후 성과를 확인합니다.
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+화면의 금액은 DB의 백만원 단위를 억원·조원으로 환산해 표시합니다. CSV에는 원본 백만원 단위를 유지합니다.
 
-## Getting Started
+## 로컬 실행
 
-### Installation
+Node.js 20.19+ 또는 22.12+와 pnpm 10.33.4를 사용합니다.
 
-Install the dependencies:
-
-```bash
-npm install
+```sh
+corepack enable
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-### Development
+`.env.local`에 다음 공개 설정을 지정합니다. 서버용 secret 키를 넣지 마세요.
 
-Start the development server with HMR:
-
-```bash
-npm run dev
+```dotenv
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
 ```
 
-Your application will be available at `http://localhost:5173`.
+## 검증
 
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
+```sh
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm build-storybook
 ```
 
-## Deployment
+`pnpm test`는 집계·페이지 조회 단위 테스트와 Chromium에서 실행하는 비동기 훅 테스트를 포함합니다. 브라우저가 없다면 `pnpm exec playwright install chromium`으로 설치합니다. 테스트는 모의 응답을 사용하며 운영 DB에 접근하지 않습니다.
 
-### Docker Deployment
+## 코드 구조
 
-To build and run using Docker:
+- `app/services`: Supabase 조회, 페이지 순회, 응답 숫자 정규화
+- `app/hooks/useAsyncData.ts`: 요청 취소, 이전 응답 무시, 초기 로딩·재조회·오류 상태
+- `app/hooks`: 화면별 조회 조합과 검색 상태
+- `app/lib/tradeAnalysis.ts`: 거래일별 기록을 확인하는 연속 매매 계산
+- `app/components`: 화면 표시와 사용자 입력
 
-```bash
-docker build -t my-app .
+기업 목록은 동시에 진행 중인 요청만 공유합니다. 완료 후에는 새 요청으로 다시 조회하므로 영구 캐시가 남지 않습니다. 화면별 요청은 취소 신호를 전달하며, 공유하는 기업 목록 요청은 각 소비자가 이전 응답을 무시합니다.
 
-# Run the container
-docker run -p 3000:3000 my-app
+일별 합계는 기존 DB API를 유지하기 위해 페이지를 순차 조회하며 합산합니다. 중간 페이지가 실패하면 전체 조회를 실패 처리합니다. 데이터 전송량 자체를 줄이려면 추후 DB 집계 RPC 도입이 필요합니다.
+
+## 시장 인사이트
+
+새 인사이트는 `get_dashboard_market_insights(window_days)` RPC 한 번으로 조회하며, 원본 가격 이력 전체를 브라우저에 내려받지 않습니다. RPC는 수급·가격·KOSPI 지수가 모두 확보된 최신 날짜를 사용합니다. 기존 수급 요약과 기준일이 다르면 지연 안내를 표시합니다. 함수는 `SECURITY INVOKER`이며 기존 테이블의 읽기 정책을 따릅니다. 상위 저장소의 `supabase/migrations/20261029081641_dashboard_market_insights.sql`이 운영 DB에 적용되어 있습니다.
+
+`20261029082721_optimize_dashboard_market_insights.sql`은 최신 기간을 먼저 추린 뒤 기업명과 결합해 전체 이력을 반복 탐색하던 실행 계획을 개선합니다. 익명 사용자 실행 시간은 약 3.24초에서 1.15초로 줄었으며, 5·20일 결과의 전체 JSON 해시가 최적화 전후 동일한 것을 확인했습니다.
+
+- **하락 중 매수:** 기간 내 모든 거래일 순매수이며, 기간 직전 종가 대비 마지막 수정 종가가 하락한 종목입니다. 가격 수정 기준이 일치하고 기간 전체 수급이 있는 경우만 포함합니다.
+- **수급 규모:** 기간 누적 순매수(백만원)를 원으로 환산해 누적 KRX 거래대금으로 나눕니다. 양수와 음수는 각각 순매수·순매도이며, 비율 절댓값 상위 종목을 표시합니다. 분모 0은 결측 처리합니다.
+- **업종 변화:** 최근과 직전 두 기간 모두 수급이 있는 동일 종목 집합으로 현재 업종 분류별 합계를 비교합니다. 최신 분류 기준일과 비교 가능 종목 수를 표시합니다. 동일 자금의 이동을 추적한 결과는 아닙니다.
+- **과거 성과:** 하락 중 연속 순매수 조건이 연속 발생한 구간의 첫날을 신호로 삼고 다음 KRX 거래일 수정 시가부터 5·20·60거래일 후 수정 종가까지 비교합니다. KOSPI도 동일 진입·종료일로 비교합니다. 아직 미래 가격이 없는 신호와 가격 누락·거래정지 사례는 평균·중앙값·상승 비율에서 제외하고 각각 건수를 표시합니다. 현재 추적 코스피 종목의 기록을 사용하며 비용·배당은 반영하지 않습니다. 신호 간 기간 중복·생존 편향이 있어 전략 수익률로 해석하면 안 됩니다.
+
+가격·업종 정보가 부족하거나 조건을 만족하는 종목이 없으면 빈 상태를 표시하고, 조회 실패 시 인사이트 영역만 재시도할 수 있습니다. React 요청 취소로 기간 전환 시 이전 응답이 새 조건에 섞이지 않도록 처리합니다.
+
+## 추가 수급 인사이트
+
+개별 지표는 대시보드의 `근거를 더 자세히 살펴보기`에서 제공합니다. `방향과 강도 / 평소와 다른 매매 / 전체 분포` 필터가 있으며, 5·20거래일 선택을 핵심 요약과 공유합니다. 각 카드의 매수·매도 선택과 가격·수급 조합을 누르면 해당 종목을 볼 수 있습니다.
+
+`get_dashboard_flow_insights(window_days)`는 `20261029083851_dashboard_flow_signals.sql`로 배포한 읽기 전용 `SECURITY INVOKER` 함수입니다. 최근 두 기간 모두 수급이 완전한 같은 코스피 종목 집합을 비교합니다. 누락을 0으로 채우지 않습니다. 가격과 지수까지 확보된 공통 기준일을 쓰고, 집계 결과만 전송합니다. 익명 사용자 실행 시간은 초기 실데이터 검증에서 약 359ms였습니다.
+
+| 분석 | 계산 기준 |
+| --- | --- |
+| 방향 전환 | 두 기간의 누적 금액 부호가 서로 반대이며 둘 다 0이 아님 |
+| 강도 변화 | 두 기간의 누적 방향이 같을 때 하루 평균 금액의 차이. 매수 강화·둔화, 매도 강화·둔화를 분리 |
+| 상위권 진입·이탈 | 양수 누적 금액으로 순위를 매겨 상위 20위 경계 통과를 비교. 첫 매수나 보유 여부를 뜻하지 않음 |
+| 이례적 수급 | 기간 선택과 별개로 기준일 **하루** 금액의 절댓값을 직전 60거래일과 비교. 60일이 모두 존재하고 그중 95% 이상의 날보다 커야 함. 오늘/기준일은 비교 이력에서 제외 |
+| 꾸준함 | 기간의 80% 이상 같은 방향이고 누적 방향도 일치. 같은 방향 금액 중 최대 하루의 몫이 50% 이하 |
+| 전체와 반대 | 추적 종목 합계가 순매도인 모든 날에 순매수하거나, 반대로 전체 순매수인 모든 날에 순매도. 해당 방향의 날이 2일 이상이며 종목 누적 방향도 일치 |
+| 매수 확산 | 순매수 종목 수 / 비교 가능 종목 수. 두 기간은 같은 종목 집합을 사용. 기간 누적 비율과 날짜별 막대는 구분 |
+| 집중도 | 종목별 누적 순매수가 양수인 금액과 음수인 금액의 절댓값을 따로 합산. 각 방향의 상위 5종목 금액 비중. 상계한 순매수 합계를 분모로 쓰지 않음 |
+| 가격·수급 조합 | 기간 직전과 마지막 수정 종가의 상승·하락 × 누적 금액의 부호. 수정 기준 불일치·가격 누락은 제외, 보합 또는 누적 금액 0은 별도 표시 |
+
+일반 종목 목록은 누적 금액 절댓값 상위 5개를 표시합니다. 강도 변화는 일평균 변화 절댓값, 이례적 수급은 기준일 하루 절댓값, 순위 진입·이탈은 해당 기간/직전 기간 순위로 정렬합니다. 각 카드에 전체 조건 충족 건수와 해석을 표시합니다. 매매 이유나 이후 수익을 추정하는 지표는 아닙니다.
+
+실데이터의 5·20일 두 조건에서 확산 합계·가격 조합 합계·집중도 분모, 방향 전환·꾸준함·이례적 수급·순위 경계의 조건을 검증했습니다. 프런트엔드 테스트는 숫자 정규화·결측 처리·기간 요청·실패/취소·카테고리·방향 선택·집중도 전환·가격 조합 선택을 포함합니다.
+
+## 핵심 브리핑
+
+첫 화면은 **전체 흐름 → 주목할 종목과 이유 → 업종 이동** 순서로 읽습니다. 과거 패턴 성과, 개별 지표, 기존 거래 기록·차트·관심 종목은 각각 펼침 영역에 유지합니다. 데이터는 국민연금 단독 거래가 아닌 한국투자증권의 연기금·기금 분류임을 표시합니다.
+
+`20261029131427_dashboard_briefing.sql`은 기존 수급 RPC에 다음 집계를 추가합니다. 이전 목록의 상위 5종목을 합치는 방식이 아니라, 비교 가능한 전체 종목에서 조건을 검사합니다.
+
+- 전체 흐름: 기간 순매수 합계·직전 합계, 순매수 종목 비율·변화, 해당 방향 상위 5종목 집중도를 함께 표시합니다. 예를 들어 합계는 양수인데 순매도 종목이 더 많으면 이 차이를 문장으로 설명합니다.
+- 주목할 종목: **방향 전환 / 꾸준함 / 같은 방향의 이례적 기준일 수급 / 거래대금 대비 절댓값 5% 이상** 중 2개 이상 충족. 거래대금 대비 비율 절댓값 순으로 매수·매도 각각 5개를 반환하고, 기본 3개부터 보여줍니다. 거래대금 누락은 비율을 null로 두고 뒤에 정렬합니다. 5%는 화면의 선별 기준으로, 가격 영향력이나 투자 성과를 검증한 임계값은 아닙니다.
+- 업종: 같은 종목 집합의 최근·직전 합계와 변화, 업종 내 순매수·순매도 종목 수를 함께 표시합니다. 매수 쪽 변화에도 순매도 축소가 포함됨을 구분합니다. 기본은 증가·감소 각 3업종, 전체 보기로 변화 0인 업종까지 확인합니다.
+
+5·20일 두 기간에서 익명 사용자 실행, 업종 금액·종목 수 합계, 최소 선정 근거 수, 이례적 거래 방향 일치 및 원본 수급·거래대금을 이용한 독립 비율 계산을 검증했습니다. 브라우저 테스트는 금액과 확산의 엇갈림, 매수·매도 근거 전환, 결측값, 종목 확장, 업종 해석과 상세 영역 펼침을 포함합니다.
+
+## 배포
+
+```sh
+pnpm build
+pnpm start
 ```
 
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+Dockerfile도 동일한 pnpm 잠금 파일을 사용합니다. Vite 환경변수는 프런트엔드 빌드 시 반영되므로 이미지 빌드 전에 설정 파일을 준비해야 합니다. 프런트엔드 변경에는 Python 수집 코드나 AWS Lambda 재배포가 필요하지 않습니다.

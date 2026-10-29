@@ -15,7 +15,7 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     !isStorybook && reactRouter(),
-  ].filter(Boolean) as any,
+  ],
   resolve: {
     tsconfigPaths: true
   },

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CompanyHistoryTable } from "./CompanyHistoryTable";
+import { MemoryRouter } from "react-router";
 
 const mockRecords = [
   { date: "20260619", company_id: "005930", quantity: 95000, amount: 6650 },
@@ -14,6 +15,13 @@ const mockRecords = [
 const meta: Meta<typeof CompanyHistoryTable> = {
   title: "Dashboard/Company/CompanyHistoryTable",
   component: CompanyHistoryTable,
+  decorators: [
+    (Story) => (
+      <MemoryRouter>
+        <Story />
+      </MemoryRouter>
+    ),
+  ],
   parameters: {
     layout: "padded",
   },

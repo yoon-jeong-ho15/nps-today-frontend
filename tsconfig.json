@@ -1,6 +1,7 @@
 {
   "include": [
     "**/*",
+    ".storybook/**/*",
     "**/.server/**/*",
     "**/.client/**/*",
     ".react-router/types/**/*"
