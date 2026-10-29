@@ -3,7 +3,19 @@ import { playwright } from "@vitest/browser-playwright";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
-  resolve: { alias: { "~": fileURLToPath(new URL("./app", import.meta.url)) } },
+  resolve: {
+    alias: { "~": fileURLToPath(new URL("./app", import.meta.url)) },
+    dedupe: ["react", "react-dom"],
+  },
+  optimizeDeps: {
+    include: [
+      "react",
+      "react-dom/client",
+      "react/jsx-runtime",
+      "react-router",
+      "lucide-react",
+    ],
+  },
   test: {
     projects: [
       {
@@ -20,6 +32,7 @@ export default defineConfig({
           name: "browser",
           include: ["app/**/*.browser.test.tsx"],
           browser: {
+            screenshotDirectory: "test-results/screenshots",
             enabled: true,
             headless: true,
             provider: playwright(),

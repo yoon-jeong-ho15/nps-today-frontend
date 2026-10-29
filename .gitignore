@@ -9,3 +9,5 @@
 
 *storybook.log
 storybook-static
+/test-results/
+/.vitest-attachments/

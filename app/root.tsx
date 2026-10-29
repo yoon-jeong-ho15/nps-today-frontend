@@ -1,5 +1,6 @@
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
@@ -10,18 +11,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 
-export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
-];
+export const links: Route.LinksFunction = () => [];
 
 import { ThemeProvider } from "./provider/theme-provider";
 import Header from "~/components/header";
@@ -38,9 +28,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body className="bg-background text-foreground antialiased transition-colors">
         <ThemeProvider defaultTheme="light" storageKey="nps-ui-theme">
+          <a className="skip-link" href="#main-content">
+            본문 바로가기
+          </a>
           <Header />
-          {children}
-          <Footer />
+          <div className="app-workspace">
+            <div id="main-content">{children}</div>
+            <Footer />
+          </div>
         </ThemeProvider>
         <ScrollRestoration />
         <Scripts />
@@ -54,15 +49,18 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
+  let message = "페이지를 불러오지 못했어요";
+  let details = "잠시 후 다시 시도하거나 대시보드로 돌아가주세요.";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
+    message =
+      error.status === 404
+        ? "페이지를 찾을 수 없어요"
+        : "페이지를 불러오지 못했어요";
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? "주소를 확인하거나 대시보드에서 다시 시작해보세요."
         : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;
@@ -70,14 +68,19 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="dashboard-page">
+      <div className="panel empty-state">
+        <h1>{message}</h1>
+        <p>{details}</p>
+        <Link className="button button-primary" to="/">
+          대시보드로 돌아가기
+        </Link>
+        {stack && (
+          <pre className="w-full p-4 overflow-x-auto">
+            <code>{stack}</code>
+          </pre>
+        )}
+      </div>
     </main>
   );
 }

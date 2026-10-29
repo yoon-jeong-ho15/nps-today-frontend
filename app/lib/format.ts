@@ -8,9 +8,13 @@ export function formatDate(dateStr: string) {
 
 export function getTodayDate() {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).formatToParts(new Date());
-  const get = (type: string) => parts.find((part) => part.type === type)?.value || "";
+  const get = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "";
   return `${get("year")}${get("month")}${get("day")}`;
 }
 
@@ -45,4 +49,22 @@ export function formatQuantity(qty: number) {
   if (qty === 0) return "0 주";
   const sign = qty > 0 ? "+" : "";
   return `${sign}${qty.toLocaleString()} 주`;
+}
+
+// API amounts are stored in millions of KRW, matching the existing amount display.
+export function formatCompactAmount(amount: number, signed = true) {
+  const absolute = Math.abs(amount);
+  const sign = amount < 0 ? "−" : amount > 0 && signed ? "+" : "";
+  const [value, unit] =
+    absolute >= 1_000_000
+      ? [absolute / 1_000_000, "조원"]
+      : absolute >= 100
+        ? [absolute / 100, "억원"]
+        : [absolute, "백만원"];
+  return `${sign}${value.toLocaleString("ko-KR", { maximumFractionDigits: 1 })}${unit}`;
+}
+export function shortDate(date: string) {
+  return /^\d{8}$/.test(date)
+    ? `${date.slice(0, 4)}.${date.slice(4, 6)}.${date.slice(6, 8)}`
+    : date;
 }

@@ -1,75 +1,163 @@
-import { Building2, Calendar, ChevronRight, TrendingUp } from "lucide-react";
-import { Link } from "react-router";
-import { ThemeToggle } from "~/components/theme-toggle";
+import { useEffect, useState } from "react";
+import {
+  ArrowUpRight,
+  BarChart3,
+  CalendarDays,
+  ChevronRight,
+  CircleHelp,
+  Command,
+  LayoutDashboard,
+  Search,
+  Star,
+  TrendingUp,
+} from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router";
+import { ThemeToggle } from "./theme-toggle";
+import { SearchDialog } from "./SearchDialog";
 
-const navigationItems = [
-  {
-    name: "트렌드",
-    href: "/trend",
-    icon: TrendingUp,
-    styles: {
-      hoverBorder: "hover:border-blue-500/50",
-      bgBlur: "bg-blue-500/5 dark:bg-blue-500/10",
-      iconBg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/10",
-    }
-  },
-  {
-    name: "일별 동향",
-    href: "/date",
-    icon: Calendar,
-    styles: {
-      hoverBorder: "hover:border-yellow-500/50",
-      bgBlur: "bg-yellow-500/5 dark:bg-yellow-500/10",
-      iconBg: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/10",
-    },
-  },
-  {
-    name: "기업별 분석",
-    href: "/company",
-    icon: Building2,
-    styles: {
-      hoverBorder: "hover:border-green-500/50",
-      bgBlur: "bg-green-500/5 dark:bg-green-500/10",
-      iconBg: "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/10",
-    },
-  },
+const navigation = [
+  { name: "대시보드", href: "/", icon: LayoutDashboard },
+  { name: "수급 트렌드", href: "/trend", icon: TrendingUp },
+  { name: "거래 캘린더", href: "/date", icon: CalendarDays },
+  { name: "종목 탐색", href: "/company", icon: BarChart3 },
 ];
-
 export default function Header() {
+  const { pathname } = useLocation();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const current = navigation.find((item) =>
+    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
+  );
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      const element = event.target as HTMLElement;
+      if (
+        element.matches("input, textarea, select") ||
+        element.isContentEditable
+      )
+        return;
+      if (
+        event.key === "/" ||
+        ((event.metaKey || event.ctrlKey) && event.key === "k")
+      ) {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, []);
   return (
-    <header className="relative bg-card/70 border-b-2 py-4 px-6 sm:px-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 transition-colors">
-      <div>
-        <Link to="/" className="flex items-center gap-2">
-          <h1 className="text-4xl font-extrabold text-foreground tracking-tight mt-3">
-            오늘의 국민연금
-          </h1>
+    <>
+      <aside className="sidebar">
+        <Link to="/" className="brand">
+          <span className="brand-mark">
+            <BarChart3 size={21} strokeWidth={2.4} />
+          </span>
+          <span>
+            NPS<span className="brand-light"> today</span>
+            <small>오늘의 수급, 내일의 인사이트</small>
+          </span>
         </Link>
-      </div>
-      <div className="flex gap-2 md:mr-10 lg:mr-14">
-        {navigationItems.map((item) => (
-          <Link
+        <div className="nav-label">WORKSPACE</div>
+        <nav className="side-nav" aria-label="주 메뉴">
+          {navigation.map((item) => (
+            <NavLink
+              key={item.href}
+              to={item.href}
+              end={item.href === "/"}
+              className={({ isActive }) =>
+                `nav-item ${isActive ? "active" : ""}`
+              }
+            >
+              <item.icon size={19} />
+              <span>{item.name}</span>
+              <ChevronRight size={14} />
+            </NavLink>
+          ))}
+        </nav>
+        <div className="nav-divider" />
+        <div className="nav-label">MY SPACE</div>
+        <Link to="/company?view=watchlist" className="nav-item">
+          <Star size={18} />
+          <span>관심 종목</span>
+        </Link>
+        <div className="sidebar-bottom">
+          <div className="guide-card">
+            <span className="guide-icon">
+              <TrendingUp size={19} />
+            </span>
+            <h3>숫자 너머의 흐름을 읽다</h3>
+            <p>
+              연속 매매와 누적 수급으로
+              <br />
+              시장의 움직임을 살펴보세요.
+            </p>
+            <Link to="/trend">
+              트렌드 살펴보기 <ArrowUpRight size={14} />
+            </Link>
+          </div>
+          <details className="help-details">
+            <summary>
+              <CircleHelp size={17} /> 데이터 이용 안내
+            </summary>
+            <p>
+              거래일별로 수집한 기금 수급 데이터입니다. 실시간 시세가 아니며,
+              투자 판단의 참고 자료로 활용해주세요. 관심 종목은 현재 브라우저에
+              저장됩니다.
+            </p>
+          </details>
+          <div className="sidebar-caption">
+            <span className="status-dot" /> KOREA EQUITY DATA
+          </div>
+        </div>
+      </aside>
+      <header className="topbar">
+        <div className="breadcrumb">
+          <span className="mobile-brand">
+            <BarChart3 size={19} />
+          </span>
+          <span className="breadcrumb-workspace">워크스페이스</span>
+          <ChevronRight size={13} className="breadcrumb-workspace" />
+          <strong>{current?.name || "페이지 안내"}</strong>
+          {pathname.split("/").filter(Boolean).length > 1 && (
+            <>
+              <ChevronRight size={13} />
+              <span>상세 분석</span>
+            </>
+          )}
+        </div>
+        <div className="topbar-actions">
+          <button
+            className="global-search"
+            aria-label="종목 검색 열기"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search size={16} />
+            <span>어떤 종목이 궁금하세요?</span>
+            <kbd>
+              <Command size={10} /> K
+            </kbd>
+          </button>
+          <ThemeToggle />
+          <span className="workspace-avatar" title="개인 워크스페이스">
+            N
+          </span>
+        </div>
+      </header>
+      <nav className="mobile-nav" aria-label="모바일 메뉴">
+        {navigation.map((item) => (
+          <NavLink
             key={item.href}
             to={item.href}
-            className={`group relative flex items-center rounded-2xl bg-card cursor-pointer border border-border hover:bg-muted/40 ${item.styles.hoverBorder} transition-all duration-300 p-2 items-center gap-3 text-sm font-medium text-foreground w-48`}
+            end={item.href === "/"}
+            className={({ isActive }) => (isActive ? "active" : "")}
           >
-            <div
-              className={`absolute -top-12 -right-12 w-32 h-32 ${item.styles.bgBlur} rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500`}
-            />
-            <div
-              className={`w-8 h-8 md:w-12 md:h-12 rounded-2xl ${item.styles.iconBg} flex items-center justify-center border`}
-            >
-              <item.icon className="w-4 h-4 md:w-6 md:h-6" />
-            </div>
-            <h2 className="text-sm lg:text-base text-foreground flex items-center gap-1.5 whitespace-nowrap">
-              {item.name}
-              <ChevronRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-            </h2>
-          </Link>
+            <item.icon size={20} />
+            <span>{item.name}</span>
+          </NavLink>
         ))}
-      </div>
-      <div className="absolute right-6 top-1/2flex items-center justify-end">
-        <ThemeToggle />
-      </div>
-    </header>
+      </nav>
+      {searchOpen && <SearchDialog onClose={() => setSearchOpen(false)} />}
+    </>
   );
 }

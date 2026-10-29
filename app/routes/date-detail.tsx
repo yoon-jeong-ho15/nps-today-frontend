@@ -1,158 +1,136 @@
-import type { Route } from "./+types/date-detail";
-import { useParams } from "react-router";
 import { useMemo } from "react";
+import { ArrowLeft, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router";
+import type { Route } from "./+types/date-detail";
+import { useDateDetailData } from "~/hooks/useDateDetailData";
+import { useTradingDates } from "~/hooks/useTradingDates";
+import { formatDateWithWeekday, shortDate } from "~/lib/format";
 import { DayMetricsGrid } from "~/components/dashboard/day/DayMetricsGrid";
 import { DayTopTrades } from "~/components/dashboard/day/DayTopTrades";
 import { DayRecordsTable } from "~/components/dashboard/day/DayRecordsTable";
-import { useDateDetailData } from "~/hooks/useDateDetailData";
-import { formatDate, formatDateWithWeekday } from "~/lib/format";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  PageHeading,
+} from "~/components/dashboard/shared";
 
 export function meta({ params }: Route.MetaArgs) {
-  const dateStr = params.date || "";
-  const formattedDate = formatDate(dateStr);
-  return [
-    { title: `NPS today - ${formattedDate} 거래 동향` },
-    {
-      name: "description",
-      content: `국민연금공단(NPS) 코스피 주식 ${formattedDate} 일별 동향 대시보드`,
-    },
-  ];
+  return [{ title: `${shortDate(params.date || "")} 일별 수급 · NPS today` }];
 }
-
 export default function DateDetailRoute() {
-  const { date: routeDate } = useParams();
-
-  const {
-    data,
-    companies,
-    selectedDate,
-    initialLoading,
-    dataLoading,
-    error,
-  } = useDateDetailData(routeDate);
-
-  // 1. Map company IDs to names
-  const companyMap = useMemo(() => {
-    return new Map(companies.map((c) => [c.id, c.name]));
-  }, [companies]);
-
-  // 2. Filter records for the selected date
-  const selectedRecords = useMemo(() => {
+  const { date } = useParams();
+  const navigate = useNavigate();
+  const { data, companies, selectedDate, initialLoading, dataLoading, error } =
+    useDateDetailData(date);
+  const { dates } = useTradingDates();
+  const older = dates.find((day) => day < selectedDate);
+  const newer = dates.filter((day) => day > selectedDate).at(-1);
+  const records = useMemo(() => {
+    const names = new Map(
+      companies.map((company) => [company.id, company.name]),
+    );
     return data
-      .filter((r) => r.date === selectedDate)
-      .map((r) => ({
-        ...r,
-        company_name: companyMap.get(r.company_id) || `회사 (${r.company_id})`,
+      .filter((row) => row.date === selectedDate)
+      .map((row) => ({
+        ...row,
+        company_name: names.get(row.company_id) || row.company_id,
       }));
-  }, [data, selectedDate, companyMap]);
-
-  // 3. Metrics calculation
+  }, [data, companies, selectedDate]);
   const metrics = useMemo(() => {
-    let totalBuyAmount = 0;
-    let totalSellAmount = 0;
-    let buyCount = 0;
-    let sellCount = 0;
-
-    selectedRecords.forEach((r) => {
-      if (r.amount > 0) {
-        totalBuyAmount += r.amount;
-        buyCount += 1;
-      } else if (r.amount < 0) {
-        totalSellAmount += r.amount;
-        sellCount += 1;
+    let totalBuyAmount = 0,
+      totalSellAmount = 0,
+      buyCount = 0,
+      sellCount = 0;
+    records.forEach((row) => {
+      if (row.amount > 0) {
+        totalBuyAmount += row.amount;
+        buyCount++;
+      } else if (row.amount < 0) {
+        totalSellAmount += row.amount;
+        sellCount++;
       }
     });
-
     return {
       totalBuyAmount,
       totalSellAmount,
-      netAmount: totalBuyAmount + totalSellAmount,
       buyCount,
       sellCount,
+      netAmount: totalBuyAmount + totalSellAmount,
     };
-  }, [selectedRecords]);
-
-  const displayDateStr = formatDateWithWeekday(selectedDate);
-
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
-          <p className="text-muted-foreground text-sm font-medium animate-pulse">
-            대시보드 초기화 중...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 transition-colors">
-        <div className="max-w-md w-full bg-card text-card-foreground border border-border rounded-2xl p-6 text-center shadow-xl">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 mb-4">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-foreground">
-            대시보드 로드 오류
-          </h3>
-          <p className="text-muted-foreground text-sm mt-2 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 dark:bg-yellow-600 dark:hover:bg-yellow-500 active:bg-yellow-600 dark:active:bg-yellow-750 text-white dark:text-zinc-950 rounded-lg text-sm font-semibold transition-colors"
-          >
-            다시 시도
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  }, [records]);
   return (
-    <div className="min-h-screen font-sans antialiased selection:bg-emerald-500/30 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
-        <div className="relative">
+    <main className="dashboard-page">
+      <Link className="back-link" to="/date">
+        <ArrowLeft size={14} /> 거래 캘린더로 돌아가기
+      </Link>
+      <PageHeading
+        eyebrow="DAILY FLOW"
+        title={formatDateWithWeekday(selectedDate)}
+        description="이날의 매수·매도 흐름과 주요 종목을 살펴보세요."
+        actions={
+          <div className="date-controls">
+            <button
+              className="icon-button"
+              aria-label="이전 거래일"
+              disabled={!older}
+              onClick={() => navigate(`/date/${older}`)}
+            >
+              <ChevronLeft size={17} />
+            </button>
+            <input
+              type="date"
+              className="date-input"
+              aria-label="거래일 선택"
+              value={`${selectedDate.slice(0, 4)}-${selectedDate.slice(4, 6)}-${selectedDate.slice(6, 8)}`}
+              onChange={(event) => {
+                if (event.target.value)
+                  navigate(`/date/${event.target.value.replaceAll("-", "")}`);
+              }}
+            />
+            <button
+              className="icon-button"
+              aria-label="다음 거래일"
+              disabled={!newer}
+              onClick={() => navigate(`/date/${newer}`)}
+            >
+              <ChevronRight size={17} />
+            </button>
+          </div>
+        }
+      />
+      {initialLoading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState message={error} />
+      ) : (
+        <>
           {dataLoading && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center min-h-[400px]">
-              <div className="bg-card/90 border border-border backdrop-blur-sm px-6 py-4 rounded-xl flex items-center gap-3 shadow-2xl">
-                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
-                <span className="text-foreground text-sm font-medium">
-                  거래 데이터 불러오는 중...
-                </span>
-              </div>
+            <div className="refresh-indicator" role="status">
+              <RefreshCw size={13} /> 거래일 데이터를 불러오는 중...
             </div>
           )}
-
           <div
-            className={`flex flex-col gap-8 transition-all duration-300 ${
-              dataLoading ? "opacity-25 pointer-events-none blur-[1px]" : "opacity-100"
-            }`}
+            className={`detail-content ${dataLoading ? "is-refreshing" : ""}`}
+            aria-busy={dataLoading}
           >
-            {/* Key Metrics Cards */}
-            <DayMetricsGrid metrics={metrics} displayDateStr={displayDateStr} />
-
-            {/* Top 10 Trades */}
-            <DayTopTrades selectedRecords={selectedRecords} />
-
-            {/* Interactive Full Table Section */}
-            <DayRecordsTable selectedRecords={selectedRecords} />
+            {!records.length ? (
+              <div className="panel">
+                <EmptyState
+                  title="이 날짜에는 수집된 거래가 없어요"
+                  description="휴장일이거나 아직 수집 전일 수 있습니다. 이전·다음 거래일을 선택해보세요."
+                />
+              </div>
+            ) : (
+              <>
+                <DayMetricsGrid metrics={metrics} />
+                <DayTopTrades selectedRecords={records} />
+                <DayRecordsTable selectedRecords={records} />
+              </>
+            )}
           </div>
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </main>
   );
 }

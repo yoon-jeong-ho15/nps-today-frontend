@@ -1,14 +1,18 @@
-import { Link } from "react-router";
-
-export default function Footer(){
-    return (
-        <footer className="py-8 border-t border-border/40 flex divide-border/50 justify-between items-center px-14">
-            <span className="text-xs text-muted-foreground/60">
-                © {new Date().getFullYear()} NPS Today. All rights reserved.
-            </span>
-            <Link to ="https://github.com/yoon-jeong-ho15/nps-today-frontend" className="inline-flex items-center gap-1 text-muted-foreground/80 hover:text-muted-foreground transition-colors mt-2">
-                GitHub
-            </Link>
-      </footer>
-    )
+import { ArrowUpRight } from "lucide-react";
+export default function Footer() {
+  return (
+    <footer className="app-footer">
+      <span>
+        © {new Date().getFullYear()} NPS today{" "}
+        <span className="footer-divider">/</span> 데이터를 이해하는 더 쉬운 방법
+      </span>
+      <a
+        href="https://github.com/yoon-jeong-ho15/nps-today-frontend"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub <ArrowUpRight size={12} />
+      </a>
+    </footer>
+  );
 }

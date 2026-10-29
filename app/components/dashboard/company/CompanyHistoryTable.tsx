@@ -1,72 +1,110 @@
-import { History } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
-import { formatDate, formatAmount, formatQuantity } from "~/lib/format";
-
+import { useState } from "react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { Link } from "react-router";
 import type { NetBuyRecord } from "~/types/domain";
-
-interface CompanyHistoryTableProps {
-  data: NetBuyRecord[];
-}
-
-export function CompanyHistoryTable({ data }: CompanyHistoryTableProps) {
+import { Money, Panel, EmptyState } from "../shared";
+import { shortDate } from "~/lib/format";
+import { downloadCsv } from "~/lib/download";
+export function CompanyHistoryTable({ data }: { data: NetBuyRecord[] }) {
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(data.length / 10));
+  const current = Math.min(page, pages - 1);
   return (
-    <section className="bg-card border border-border rounded-2xl p-6 shadow-md transition-colors">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-          <History className="w-4 h-4 text-muted-foreground" /> 일자별 매매 상세 기록
-        </h3>
-        <p className="text-muted-foreground text-xs mt-1">
-          해당 분석 기간 동안의 일별 거래 현황입니다.
-        </p>
-      </div>
-
-      <div className="rounded-xl border bg-card text-card-foreground shadow overflow-hidden">
-        <Table className="w-full text-xs sm:text-sm">
-          <TableHeader>
-            <TableRow>
-              <TableHead>거래일자</TableHead>
-              <TableHead className="text-right">순매수 수량</TableHead>
-              <TableHead className="text-right">순매수 금액</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.length > 0 ? (
-              data.map((item) => {
-                const isNetBuy = item.amount >= 0;
-                return (
-                  <TableRow key={item.date}>
-                    <TableCell className="font-medium text-muted-foreground">
-                      {formatDate(item.date)}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-medium font-mono ${item.quantity >= 0
-                        ? "text-emerald-500 dark:text-emerald-400"
-                        : "text-rose-500 dark:text-rose-400"
-                        }`}
+    <Panel
+      title="일자별 거래 내역"
+      description="날짜를 선택하면 해당일 전체 종목 수급으로 이동합니다."
+      action={
+        <button
+          className="button button-secondary"
+          disabled={!data.length}
+          onClick={() =>
+            downloadCsv(
+              `nps-${data[0]?.company_id || "company"}.csv`,
+              ["거래일", "종목코드", "순매수 금액(백만원)", "순매수 수량(주)"],
+              data.map((row) => [
+                shortDate(row.date),
+                row.company_id,
+                row.amount,
+                row.quantity,
+              ]),
+            )
+          }
+        >
+          <Download size={13} /> CSV 다운로드
+        </button>
+      }
+    >
+      {!data.length ? (
+        <EmptyState />
+      ) : (
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>거래일</th>
+                <th>매매 구분</th>
+                <th className="align-right">순매수 금액</th>
+                <th className="align-right">순매수 수량</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.slice(current * 10, (current + 1) * 10).map((row) => (
+                <tr key={row.date}>
+                  <td>
+                    <Link className="history-date" to={`/date/${row.date}`}>
+                      {shortDate(row.date)}
+                    </Link>
+                  </td>
+                  <td>
+                    <span
+                      className={`badge ${row.amount > 0 ? "badge-buy" : row.amount < 0 ? "badge-sell" : ""}`}
                     >
-                      {formatQuantity(item.quantity)}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-bold font-mono ${isNetBuy
-                        ? "text-emerald-500 dark:text-emerald-400"
-                        : "text-rose-500 dark:text-rose-400"
-                        }`}
-                    >
-                      {formatAmount(item.amount)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center">
-                  해당 기간 내 국민연금 거래 상세 정보가 존재하지 않습니다.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                      {row.amount > 0
+                        ? "순매수"
+                        : row.amount < 0
+                          ? "순매도"
+                          : "보합"}
+                    </span>
+                  </td>
+                  <td className="align-right">
+                    <Money amount={row.amount} />
+                  </td>
+                  <td
+                    className={`align-right ${row.quantity > 0 ? "positive" : row.quantity < 0 ? "negative" : "muted"}`}
+                  >
+                    {row.quantity > 0 ? "+" : ""}
+                    {row.quantity.toLocaleString()}주
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div className="table-pagination">
+        <span>총 {data.length}거래일</span>
+        <div className="pagination-controls">
+          <button
+            className="icon-button"
+            aria-label="이전 거래 내역 페이지"
+            disabled={!current}
+            onClick={() => setPage(current - 1)}
+          >
+            <ChevronLeft size={13} />
+          </button>
+          <span>
+            {current + 1} / {pages}
+          </span>
+          <button
+            className="icon-button"
+            aria-label="다음 거래 내역 페이지"
+            disabled={current + 1 >= pages}
+            onClick={() => setPage(current + 1)}
+          >
+            <ChevronRight size={13} />
+          </button>
+        </div>
       </div>
-    </section>
+    </Panel>
   );
 }
