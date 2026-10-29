@@ -30,6 +30,7 @@ import {
 } from "~/components/dashboard/shared";
 import { CompanyLogo } from "~/components/dashboard/company/CompanyLogo";
 import { RecordsTable } from "~/components/dashboard/RecordsTable";
+import { MarketInsightsSection } from "~/components/dashboard/MarketInsights";
 import { formatCompactAmount, shortDate } from "~/lib/format";
 
 export function meta({}: Route.MetaArgs) {
@@ -38,7 +39,7 @@ export function meta({}: Route.MetaArgs) {
     {
       name: "description",
       content:
-        "최근 거래일 수급, 순매수·순매도 상위 종목, 연속 매매와 관심 종목을 한눈에 확인하세요.",
+        "연기금·기금의 전체 수급, 여러 근거가 겹친 종목, 업종별 변화를 함께 확인하세요.",
     },
   ];
 }
@@ -73,8 +74,8 @@ export default function Home() {
     <main className="dashboard-page">
       <PageHeading
         eyebrow="YOUR MARKET AT A GLANCE"
-        title="오늘의 수급, 한눈에"
-        description="큰 자금의 작은 움직임까지. 최근 거래일의 수급 흐름을 확인하세요."
+        title="연기금 수급, 무엇이 달라졌나?"
+        description="전체 자금 흐름부터 주목할 종목과 업종까지, 변화의 이유를 함께 읽어보세요."
         actions={
           <>
             <span className="data-date">
@@ -106,6 +107,10 @@ export default function Home() {
         </Panel>
       ) : (
         <>
+          <MarketInsightsSection />
+          <details className="briefing-disclosure briefing-records">
+            <summary><span><strong>거래 기록과 관심 종목</strong><small>최근 거래일 순위·일별 차트·연속 매매·내 관심 종목</small></span><span className="briefing-disclosure-action">기록 펼치기</span></summary>
+            <div className="briefing-disclosure-content">
           <div className="metrics-grid">
             <MetricCard
               featured
@@ -341,6 +346,7 @@ export default function Home() {
               )}
             </Panel>
           </div>
+          </div></details>
           <div className="data-note">
             <CircleHelp size={12} />
             <span>
