@@ -1,5 +1,4 @@
 import type { Route } from "./+types/company-list";
-import { Link } from "react-router";
 import { Search, X } from "lucide-react";
 import { useCompanyListData } from "~/hooks/useCompanyListData";
 import { CompanyCard } from "~/components/dashboard/company/CompanyCard";

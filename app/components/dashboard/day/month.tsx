@@ -97,7 +97,7 @@ export default function Month({
                 // Green
                 colorClasses =
                   "text-green-800 dark:text-green-300 border-green-200/50 dark:border-green-800/30 bg-[rgba(34,197,94,var(--cell-opacity))] hover:bg-[rgba(34,197,94,calc(var(--cell-opacity)+0.15))]";
-              } else {
+              } else if (amount < 0) {
                 // Red
                 colorClasses =
                   "text-red-800 dark:text-red-300 border-red-200/50 dark:border-red-800/30 bg-[rgba(239,68,68,var(--cell-opacity))] hover:bg-[rgba(239,68,68,calc(var(--cell-opacity)+0.15))]";

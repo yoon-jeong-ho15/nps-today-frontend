@@ -20,7 +20,7 @@ export default function DateListRoute() {
   const maxAbsAmount = useMemo(() => {
     const values = Object.values(dailyTotals);
     if (values.length === 0) return 1; // prevent division by zero
-    return Math.max(...values.map(Math.abs));
+    return Math.max(1, ...values.map(Math.abs));
   }, [dailyTotals]);
 
   if (loading) {

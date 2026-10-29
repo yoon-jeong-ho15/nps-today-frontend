@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown, Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
-import type { TrendCompany } from "~/hooks/useTrendData";
+import type { TrendCompany } from "~/types/domain";
 import { CompanyCard } from "~/components/dashboard/company/CompanyCard";
 
 interface StreakTrendGridProps {

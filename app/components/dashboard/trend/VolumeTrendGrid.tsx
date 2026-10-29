@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown, Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router";
-import type { VolumeTrendCompany } from "~/hooks/useVolumeTrendData";
+import type { VolumeTrendCompany } from "~/types/domain";
 import { formatAmount } from "~/lib/format";
 import { CompanyCard } from "~/components/dashboard/company/CompanyCard";
 

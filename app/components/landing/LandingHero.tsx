@@ -22,7 +22,7 @@ export function LandingHero() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   // Load company list for autocomplete search
-  const { filteredCompanies } = useCompanyListData();
+  const { filteredCompanies, loading, error } = useCompanyListData();
 
   // Filter top matches for hero search dropdown
   const searchResults = useMemo(() => {
@@ -140,7 +140,11 @@ export function LandingHero() {
               <span>검색 결과 ({searchResults.length})</span>
               <span>클릭 시 기업 분석으로 이동</span>
             </div>
-            {searchResults.length === 0 ? (
+            {loading || error ? (
+              <div role={error ? "alert" : "status"} className="p-6 text-center text-sm text-muted-foreground">
+                {error || "기업 목록을 불러오는 중입니다."}
+              </div>
+            ) : searchResults.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
                 검색된 코스피 상장사가 없습니다.
               </div>

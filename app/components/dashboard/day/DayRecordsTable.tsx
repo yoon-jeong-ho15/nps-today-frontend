@@ -19,7 +19,7 @@ export function DayRecordsTable({ selectedRecords }: DayRecordsTableProps) {
 
     // Filter by search term
     if (searchTerm.trim() !== "") {
-      const term = searchTerm.toLowerCase();
+      const term = searchTerm.toLowerCase().trim();
       result = result.filter(
         (r) =>
           r.company_name.toLowerCase().includes(term) ||
@@ -75,7 +75,7 @@ export function DayRecordsTable({ selectedRecords }: DayRecordsTableProps) {
             </span>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value === "amountAsc" ? "amountAsc" : "amountDesc")}
               className="bg-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all duration-200 cursor-pointer font-medium"
             >
               <option value="amountDesc">순매수 금액 높은 순</option>

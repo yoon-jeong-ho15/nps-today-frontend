@@ -1,17 +1,15 @@
 import type { Route } from "./+types/date-detail";
-import { useParams, useNavigate } from "react-router";
+import { useParams } from "react-router";
 import { useMemo } from "react";
 import { DayMetricsGrid } from "~/components/dashboard/day/DayMetricsGrid";
 import { DayTopTrades } from "~/components/dashboard/day/DayTopTrades";
 import { DayRecordsTable } from "~/components/dashboard/day/DayRecordsTable";
 import { useDateDetailData } from "~/hooks/useDateDetailData";
+import { formatDate, formatDateWithWeekday } from "~/lib/format";
 
 export function meta({ params }: Route.MetaArgs) {
   const dateStr = params.date || "";
-  let formattedDate = dateStr;
-  if (dateStr.length === 8) {
-    formattedDate = `${dateStr.substring(0, 4)}년 ${parseInt(dateStr.substring(4, 6), 10)}월 ${parseInt(dateStr.substring(6, 8), 10)}일`;
-  }
+  const formattedDate = formatDate(dateStr);
   return [
     { title: `NPS today - ${formattedDate} 거래 동향` },
     {
@@ -23,21 +21,15 @@ export function meta({ params }: Route.MetaArgs) {
 
 export default function DateDetailRoute() {
   const { date: routeDate } = useParams();
-  const navigate = useNavigate();
 
   const {
     data,
     companies,
     selectedDate,
-    todayDate,
     initialLoading,
     dataLoading,
     error,
   } = useDateDetailData(routeDate);
-
-  const handleDateChange = (newDate: string) => {
-    navigate(`/date/${newDate}`);
-  };
 
   // 1. Map company IDs to names
   const companyMap = useMemo(() => {
@@ -80,18 +72,7 @@ export default function DateDetailRoute() {
     };
   }, [selectedRecords]);
 
-  const displayDateStr = useMemo(() => {
-    if (!selectedDate || selectedDate.length !== 8) return selectedDate;
-    const year = selectedDate.substring(0, 4);
-    const month = selectedDate.substring(4, 6);
-    const day = selectedDate.substring(6, 8);
-    
-    const dateObj = new Date(`${year}-${month}-${day}`);
-    const days = ['일', '월', '화', '수', '목', '금', '토'];
-    const dayName = days[dateObj.getDay()];
-
-    return `${year}년 ${parseInt(month, 10)}월 ${parseInt(day, 10)}일 (${dayName}요일)`;
-  }, [selectedDate]);
+  const displayDateStr = formatDateWithWeekday(selectedDate);
 
   if (initialLoading) {
     return (
